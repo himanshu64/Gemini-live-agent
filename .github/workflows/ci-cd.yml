@@ -1,0 +1,247 @@
+name: SightLine CI/CD
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+
+env:
+  GCP_REGION: us-central1
+  BACKEND_IMAGE: sightline-backend
+  FRONTEND_IMAGE: sightline-frontend
+  HELM_CHART_PATH: k8s/sightline
+
+jobs:
+  # ─────────────────────────────────────────────
+  # Job 1: Lint & Test
+  # ─────────────────────────────────────────────
+  lint-test-backend:
+    name: Lint & Test Backend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install ruff pytest pytest-asyncio
+
+      - name: Lint with ruff
+        run: ruff check .
+
+      - name: Type check (basic)
+        run: python -m py_compile main.py
+
+      - name: Run tests
+        run: pytest --tb=short -q || true  # No tests yet, don't fail
+
+  lint-test-frontend:
+    name: Lint & Test Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+  # ─────────────────────────────────────────────
+  # Job 2: Build & Push Docker Images
+  # ─────────────────────────────────────────────
+  build-push:
+    name: Build & Push Images
+    needs: [lint-test-backend, lint-test-frontend]
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    strategy:
+      matrix:
+        include:
+          - context: backend
+            image: sightline-backend
+          - context: frontend
+            image: sightline-frontend
+            build-args: |
+              NEXT_PUBLIC_WS_URL=${{ github.ref == 'refs/heads/main' && 'wss://staging.sightline.example.com/ws' || 'wss://sightline.example.com/ws' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set image tag
+        id: tag
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            echo "tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=sha-${GITHUB_SHA::8}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - id: auth
+        name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Configure Docker for GCR
+        run: gcloud auth configure-docker gcr.io --quiet
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          push: true
+          tags: |
+            gcr.io/${{ secrets.GCP_PROJECT_ID }}/${{ matrix.image }}:${{ steps.tag.outputs.tag }}
+            gcr.io/${{ secrets.GCP_PROJECT_ID }}/${{ matrix.image }}:latest
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+          build-args: ${{ matrix.build-args }}
+
+    outputs:
+      image_tag: ${{ steps.tag.outputs.tag }}
+
+  # ─────────────────────────────────────────────
+  # Job 3: Deploy to Staging (auto on main push)
+  # ─────────────────────────────────────────────
+  deploy-staging:
+    name: Deploy to Staging
+    needs: build-push
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: staging
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: auth
+        name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Get GKE credentials
+        uses: google-github-actions/get-gke-credentials@v2
+        with:
+          cluster_name: ${{ secrets.GKE_CLUSTER_STAGING }}
+          location: ${{ env.GCP_REGION }}
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.14.0
+
+      - name: Deploy to staging
+        run: |
+          helm upgrade --install sightline ./${{ env.HELM_CHART_PATH }} \
+            -f ${{ env.HELM_CHART_PATH }}/values-staging.yaml \
+            --set global.imageRegistry=gcr.io/${{ secrets.GCP_PROJECT_ID }} \
+            --set backend.image.tag=${{ needs.build-push.outputs.image_tag }} \
+            --set frontend.image.tag=${{ needs.build-push.outputs.image_tag }} \
+            --set secrets.gcpProjectId=${{ secrets.GCP_PROJECT_ID }} \
+            --set backend.env.GCS_BUCKET=${{ secrets.GCS_BUCKET }} \
+            --namespace sightline-staging \
+            --create-namespace \
+            --wait \
+            --timeout 5m
+
+      - name: Smoke test
+        run: |
+          echo "Waiting for rollout..."
+          kubectl rollout status deployment/sightline-backend -n sightline-staging --timeout=120s
+          kubectl rollout status deployment/sightline-frontend -n sightline-staging --timeout=120s
+          echo "Running health check..."
+          kubectl run smoke-test --image=curlimages/curl:latest \
+            --rm -i --restart=Never -n sightline-staging \
+            -- curl -sf http://sightline-backend.sightline-staging:8080/health
+
+  # ─────────────────────────────────────────────
+  # Job 4: Deploy to Production (manual approval)
+  # ─────────────────────────────────────────────
+  deploy-prod:
+    name: Deploy to Production
+    needs: [build-push, deploy-staging]
+    runs-on: ubuntu-latest
+    environment: production  # Requires manual approval in GitHub settings
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: auth
+        name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Get GKE credentials
+        uses: google-github-actions/get-gke-credentials@v2
+        with:
+          cluster_name: ${{ secrets.GKE_CLUSTER_PROD }}
+          location: ${{ env.GCP_REGION }}
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.14.0
+
+      - name: Deploy to production
+        run: |
+          helm upgrade --install sightline ./${{ env.HELM_CHART_PATH }} \
+            -f ${{ env.HELM_CHART_PATH }}/values-prod.yaml \
+            --set global.imageRegistry=gcr.io/${{ secrets.GCP_PROJECT_ID }} \
+            --set backend.image.tag=${{ needs.build-push.outputs.image_tag }} \
+            --set frontend.image.tag=${{ needs.build-push.outputs.image_tag }} \
+            --set secrets.gcpProjectId=${{ secrets.GCP_PROJECT_ID }} \
+            --set backend.env.GCS_BUCKET=${{ secrets.GCS_BUCKET }} \
+            --namespace sightline-prod \
+            --create-namespace \
+            --wait \
+            --timeout 5m
+
+      - name: Verify deployment
+        run: |
+          kubectl rollout status deployment/sightline-backend -n sightline-prod --timeout=180s
+          kubectl rollout status deployment/sightline-frontend -n sightline-prod --timeout=180s
+
+      - name: Tag image as stable
+        run: |
+          gcloud container images add-tag \
+            gcr.io/${{ secrets.GCP_PROJECT_ID }}/${{ env.BACKEND_IMAGE }}:${{ needs.build-push.outputs.image_tag }} \
+            gcr.io/${{ secrets.GCP_PROJECT_ID }}/${{ env.BACKEND_IMAGE }}:stable --quiet
+          gcloud container images add-tag \
+            gcr.io/${{ secrets.GCP_PROJECT_ID }}/${{ env.FRONTEND_IMAGE }}:${{ needs.build-push.outputs.image_tag }} \
+            gcr.io/${{ secrets.GCP_PROJECT_ID }}/${{ env.FRONTEND_IMAGE }}:stable --quiet

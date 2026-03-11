@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "sightline.fullname" . }}-config
+  namespace: {{ include "sightline.namespace" . }}
+  labels:
+    {{- include "sightline.labels" . | nindent 4 }}
+data:
+  GOOGLE_CLOUD_LOCATION: {{ .Values.backend.env.GOOGLE_CLOUD_LOCATION | quote }}
+  GCS_BUCKET: {{ .Values.backend.env.GCS_BUCKET | quote }}
+  FRONTEND_ORIGIN: {{ .Values.backend.env.FRONTEND_ORIGIN | quote }}
