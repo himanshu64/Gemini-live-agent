@@ -11,7 +11,9 @@ export function useMicrophone(onAudioChunk: (base64: string) => void) {
   const streamRef = useRef<MediaStream | null>(null);
   const processorRef = useRef<ScriptProcessorNode | null>(null);
   const onChunkRef = useRef(onAudioChunk);
-  onChunkRef.current = onAudioChunk;
+  useEffect(() => {
+    onChunkRef.current = onAudioChunk;
+  }, [onAudioChunk]);
 
   const start = useCallback(async () => {
     try {

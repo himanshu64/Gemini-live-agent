@@ -9,7 +9,9 @@ export function useCamera(onFrame: (base64: string) => void) {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [isActive, setIsActive] = useState(false);
   const onFrameRef = useRef(onFrame);
-  onFrameRef.current = onFrame;
+  useEffect(() => {
+    onFrameRef.current = onFrame;
+  }, [onFrame]);
 
   const start = useCallback(async () => {
     try {
