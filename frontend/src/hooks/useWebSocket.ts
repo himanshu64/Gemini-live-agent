@@ -22,6 +22,8 @@ export function useWebSocket(onMessage: (msg: WSMessage) => void) {
     onMessageRef.current = onMessage;
   }, [onMessage]);
 
+  const connectRef = useRef<() => void>();
+
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
@@ -53,13 +55,17 @@ export function useWebSocket(onMessage: (msg: WSMessage) => void) {
         RECONNECT_MAX_DELAY
       );
       retriesRef.current++;
-      setTimeout(() => connect(), delay);
+      setTimeout(() => connectRef.current?.(), delay);
     };
 
     ws.onerror = () => {
       ws.close();
     };
   }, []);
+
+  useEffect(() => {
+    connectRef.current = connect;
+  }, [connect]);
 
   const disconnect = useCallback(() => {
     retriesRef.current = Infinity; // prevent reconnect
