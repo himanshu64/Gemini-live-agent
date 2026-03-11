@@ -24,7 +24,7 @@ export function useAudioPlayback() {
 
     const float32 = base64ToFloat32(base64Audio);
     const buffer = ctx.createBuffer(1, float32.length, SAMPLE_RATE_OUT);
-    buffer.copyToChannel(float32, 0);
+    buffer.copyToChannel(float32 as Float32Array<ArrayBuffer>, 0);
 
     const source = ctx.createBufferSource();
     source.buffer = buffer;

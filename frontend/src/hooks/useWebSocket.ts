@@ -22,7 +22,7 @@ export function useWebSocket(onMessage: (msg: WSMessage) => void) {
     onMessageRef.current = onMessage;
   }, [onMessage]);
 
-  const connectRef = useRef<() => void>();
+  const connectRef = useRef<() => void>(undefined);
 
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
