@@ -11,6 +11,13 @@ class Settings(BaseSettings):
     GCS_BUCKET: str
     FRONTEND_ORIGIN: str = "http://localhost:3000"
 
+    # Auth
+    API_TOKEN: str
+
+    # WebSocket limits
+    WS_MAX_MESSAGE_BYTES: int = 1_048_576  # 1 MB
+    WS_RATE_LIMIT_PER_SEC: int = 30
+
     model_config = SettingsConfigDict(env_file=".env")
 
 

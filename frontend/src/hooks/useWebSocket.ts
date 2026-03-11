@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { WS_URL, RECONNECT_BASE_DELAY, RECONNECT_MAX_DELAY } from "@/lib/constants";
+import { WS_URL, API_TOKEN, RECONNECT_BASE_DELAY, RECONNECT_MAX_DELAY } from "@/lib/constants";
 
 export type WSMessage =
   | { type: "audio"; data: string }
@@ -24,7 +24,8 @@ export function useWebSocket(onMessage: (msg: WSMessage) => void) {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
     setConnectionState("connecting");
-    const ws = new WebSocket(WS_URL);
+    const wsUrl = API_TOKEN ? `${WS_URL}?token=${encodeURIComponent(API_TOKEN)}` : WS_URL;
+    const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 
     ws.onopen = () => {

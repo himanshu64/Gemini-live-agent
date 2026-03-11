@@ -2,10 +2,12 @@
 
 import asyncio
 import base64
+import json
 import logging
+import time
 from uuid import uuid4
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Query, Request, Response, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from google.genai import types
 
@@ -21,9 +23,29 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[config.FRONTEND_ORIGIN],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
+
+
+# ---------------------------------------------------------------------------
+# P2: Security headers middleware
+# ---------------------------------------------------------------------------
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next) -> Response:
+    """Attach security headers to every HTTP response."""
+    response: Response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    response.headers["Strict-Transport-Security"] = (
+        "max-age=31536000; includeSubDomains"
+    )
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; frame-ancestors 'none'"
+    )
+    return response
 
 session_service = create_session_service()
 runner = create_runner(session_service)
@@ -41,9 +63,31 @@ async def _handle_upstream(
     session_id: str,
 ) -> None:
     """Read messages from the WebSocket and forward to the Live API."""
+    msg_timestamps: list[float] = []
+
     try:
         while True:
-            message = await ws.receive_json()
+            raw = await ws.receive_text()
+
+            # --- Size limit ---
+            if len(raw) > config.WS_MAX_MESSAGE_BYTES:
+                await ws.send_json({"type": "error", "message": "Message too large"})
+                continue
+
+            # --- Rate limit (sliding window) ---
+            now = time.monotonic()
+            msg_timestamps = [t for t in msg_timestamps if now - t < 1.0]
+            if len(msg_timestamps) >= config.WS_RATE_LIMIT_PER_SEC:
+                await ws.send_json({"type": "error", "message": "Rate limit exceeded"})
+                continue
+            msg_timestamps.append(now)
+
+            try:
+                message = json.loads(raw)
+            except json.JSONDecodeError:
+                await ws.send_json({"type": "error", "message": "Invalid JSON"})
+                continue
+
             msg_type = message.get("type")
 
             if msg_type == "audio":
@@ -119,11 +163,22 @@ async def _handle_downstream(
 
 
 @app.websocket("/ws")
-async def websocket_endpoint(ws: WebSocket) -> None:
+async def websocket_endpoint(ws: WebSocket, token: str = Query("")) -> None:
     """Bidirectional audio/video streaming via WebSocket."""
     await ws.accept()
+
+    # --- Token authentication ---
+    if not token or token != config.API_TOKEN:
+        client_host = ws.client.host if ws.client else "unknown"
+        logger.warning(
+            "Rejected WebSocket connection: invalid token from %s", client_host
+        )
+        await ws.close(code=1008, reason="Invalid or missing token")
+        return
+
     session_id = str(uuid4())
-    logger.info("New session: %s", session_id)
+    client_host = ws.client.host if ws.client else "unknown"
+    logger.info("New session: %s from %s", session_id, client_host)
 
     live_request_queue = LiveRequestQueue()
 

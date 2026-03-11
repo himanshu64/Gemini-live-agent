@@ -13,6 +13,13 @@ if [ -z "$PROJECT_ID" ]; then
   exit 1
 fi
 
+# Require API_TOKEN to be set — refuse to deploy without it.
+if [ -z "${API_TOKEN:-}" ]; then
+  echo "ERROR: API_TOKEN environment variable must be set before deploying."
+  echo "  Generate one with: openssl rand -base64 32"
+  exit 1
+fi
+
 echo "==> Deploying SightLine to project: $PROJECT_ID, region: $REGION"
 
 # Enable required APIs
@@ -25,10 +32,32 @@ gcloud services enable \
   cloudbuild.googleapis.com \
   --project="$PROJECT_ID"
 
-# Create GCS bucket if not exists
+# Deploy Firestore security rules
+echo "==> Deploying Firestore security rules..."
+if command -v firebase &>/dev/null; then
+  firebase deploy --only firestore:rules --project="$PROJECT_ID"
+else
+  echo "WARNING: firebase CLI not found. Deploy firestore.rules manually."
+fi
+
+# Create GCS bucket if not exists (with lifecycle rule for auto-cleanup)
 BUCKET_NAME="${PROJECT_ID}-sightline-frames"
-gsutil ls -b "gs://${BUCKET_NAME}" 2>/dev/null || \
+if ! gsutil ls -b "gs://${BUCKET_NAME}" 2>/dev/null; then
   gsutil mb -p "$PROJECT_ID" -l "$REGION" "gs://${BUCKET_NAME}"
+  echo "==> Setting GCS lifecycle: auto-delete frames after 7 days..."
+  cat <<'LIFECYCLE' > /tmp/sightline-lifecycle.json
+{
+  "rule": [
+    {
+      "action": {"type": "Delete"},
+      "condition": {"age": 7, "matchesPrefix": ["frames/"]}
+    }
+  ]
+}
+LIFECYCLE
+  gsutil lifecycle set /tmp/sightline-lifecycle.json "gs://${BUCKET_NAME}"
+  rm -f /tmp/sightline-lifecycle.json
+fi
 
 # Build and deploy backend
 echo "==> Building and deploying backend..."
@@ -38,9 +67,10 @@ gcloud run deploy sightline-backend \
   --region="$REGION" \
   --platform=managed \
   --allow-unauthenticated \
-  --set-env-vars="GOOGLE_CLOUD_PROJECT=$PROJECT_ID,GOOGLE_CLOUD_LOCATION=$REGION,GCS_BUCKET=$BUCKET_NAME" \
+  --set-env-vars="GOOGLE_CLOUD_PROJECT=$PROJECT_ID,GOOGLE_CLOUD_LOCATION=$REGION,GCS_BUCKET=$BUCKET_NAME,API_TOKEN=$API_TOKEN" \
   --min-instances=1 \
   --max-instances=10 \
+  --concurrency=20 \
   --memory=1Gi \
   --cpu=1 \
   --timeout=3600 \
@@ -64,7 +94,7 @@ gcloud run deploy sightline-frontend \
   --region="$REGION" \
   --platform=managed \
   --allow-unauthenticated \
-  --set-env-vars="NEXT_PUBLIC_WS_URL=$WS_URL" \
+  --set-env-vars="NEXT_PUBLIC_WS_URL=$WS_URL,NEXT_PUBLIC_API_TOKEN=$API_TOKEN" \
   --min-instances=0 \
   --max-instances=5 \
   --memory=512Mi \
@@ -87,3 +117,6 @@ echo "=== Deployment Complete ==="
 echo "Frontend: $FRONTEND_URL"
 echo "Backend:  $BACKEND_URL"
 echo "WebSocket: $WS_URL"
+echo ""
+echo "REMINDER: Set a GCP budget alert at"
+echo "  https://console.cloud.google.com/billing/budgets?project=$PROJECT_ID"

@@ -41,8 +41,15 @@ spec:
                   name: {{ include "sightline.fullname" . }}-secrets
                   key: GOOGLE_CLOUD_PROJECT
                   optional: true
+            - name: API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "sightline.fullname" . }}-secrets
+                  key: API_TOKEN
+            {{- if .Values.secrets.gcpSaKey }}
             - name: GOOGLE_APPLICATION_CREDENTIALS
               value: /var/secrets/google/gcp-sa-key.json
+            {{- end }}
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
@@ -66,13 +73,17 @@ spec:
           volumeMounts:
             - name: tmp
               mountPath: /tmp
+            {{- if .Values.secrets.gcpSaKey }}
             - name: gcp-sa-key
               mountPath: /var/secrets/google
               readOnly: true
+            {{- end }}
       volumes:
         - name: tmp
           emptyDir: {}
+        {{- if .Values.secrets.gcpSaKey }}
         - name: gcp-sa-key
           secret:
             secretName: {{ include "sightline.fullname" . }}-secrets
             optional: true
+        {{- end }}
