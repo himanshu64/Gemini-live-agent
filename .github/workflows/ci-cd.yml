@@ -6,12 +6,6 @@ on:
   pull_request:
     branches: [main]
 
-env:
-  GCP_PROJECT_ID: ${{ secrets.GOOGLE_CLOUD_PROJECT }}
-  GCP_REGION: ${{ secrets.GOOGLE_CLOUD_LOCATION }}
-  GCS_BUCKET: ${{ secrets.GCS_BUCKET }}
-  API_TOKEN: ${{ secrets.API_TOKEN }}
-
 jobs:
   # ─────────────────────────────────────────────
   # Job 1: Lint & Test (runs on PRs and pushes)
@@ -102,11 +96,11 @@ jobs:
         run: |
           gcloud run deploy sightline-backend \
             --source=./backend \
-            --project=${{ env.GCP_PROJECT_ID }} \
-            --region=${{ env.GCP_REGION }} \
+            --project=${{ secrets.GOOGLE_CLOUD_PROJECT }} \
+            --region=${{ secrets.GOOGLE_CLOUD_LOCATION }} \
             --platform=managed \
             --allow-unauthenticated \
-            --set-env-vars="GOOGLE_CLOUD_PROJECT=${{ env.GCP_PROJECT_ID }},GOOGLE_CLOUD_LOCATION=${{ env.GCP_REGION }},GCS_BUCKET=${{ env.GCS_BUCKET }},API_TOKEN=${{ env.API_TOKEN }}" \
+            --set-env-vars="GOOGLE_CLOUD_PROJECT=${{ secrets.GOOGLE_CLOUD_PROJECT }},GOOGLE_CLOUD_LOCATION=${{ secrets.GOOGLE_CLOUD_LOCATION }},GCS_BUCKET=${{ secrets.GCS_BUCKET }},API_TOKEN=${{ secrets.API_TOKEN }}" \
             --min-instances=0 \
             --max-instances=4 \
             --concurrency=20 \
@@ -120,8 +114,8 @@ jobs:
         id: backend
         run: |
           URL=$(gcloud run services describe sightline-backend \
-            --project=${{ env.GCP_PROJECT_ID }} \
-            --region=${{ env.GCP_REGION }} \
+            --project=${{ secrets.GOOGLE_CLOUD_PROJECT }} \
+            --region=${{ secrets.GOOGLE_CLOUD_LOCATION }} \
             --format="value(status.url)")
           WS_URL=$(echo "$URL" | sed 's|https://|wss://|')/ws
           echo "url=$URL" >> "$GITHUB_OUTPUT"
@@ -132,11 +126,11 @@ jobs:
         run: |
           gcloud run deploy sightline-frontend \
             --source=./frontend \
-            --project=${{ env.GCP_PROJECT_ID }} \
-            --region=${{ env.GCP_REGION }} \
+            --project=${{ secrets.GOOGLE_CLOUD_PROJECT }} \
+            --region=${{ secrets.GOOGLE_CLOUD_LOCATION }} \
             --platform=managed \
             --allow-unauthenticated \
-            --set-env-vars="NEXT_PUBLIC_WS_URL=${{ steps.backend.outputs.ws_url }},NEXT_PUBLIC_API_TOKEN=${{ env.API_TOKEN }}" \
+            --set-env-vars="NEXT_PUBLIC_WS_URL=${{ steps.backend.outputs.ws_url }},NEXT_PUBLIC_API_TOKEN=${{ secrets.API_TOKEN }}" \
             --min-instances=0 \
             --max-instances=2 \
             --memory=256Mi \
@@ -146,12 +140,12 @@ jobs:
       - name: Update backend CORS
         run: |
           FRONTEND_URL=$(gcloud run services describe sightline-frontend \
-            --project=${{ env.GCP_PROJECT_ID }} \
-            --region=${{ env.GCP_REGION }} \
+            --project=${{ secrets.GOOGLE_CLOUD_PROJECT }} \
+            --region=${{ secrets.GOOGLE_CLOUD_LOCATION }} \
             --format="value(status.url)")
           gcloud run services update sightline-backend \
-            --project=${{ env.GCP_PROJECT_ID }} \
-            --region=${{ env.GCP_REGION }} \
+            --project=${{ secrets.GOOGLE_CLOUD_PROJECT }} \
+            --region=${{ secrets.GOOGLE_CLOUD_LOCATION }} \
             --update-env-vars="FRONTEND_ORIGIN=$FRONTEND_URL"
 
       - name: Health check
