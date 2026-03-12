@@ -18,9 +18,13 @@ from tools.get_session_history import get_session_history
 from tools.emergency_alert import emergency_alert
 
 
-def _build_instruction(state: dict) -> str:
-    """Callable instruction that reads the current mode from agent state."""
-    current_mode = state.get("current_mode", "navigation")
+def _build_instruction(ctx) -> str:
+    """Callable instruction that reads the current mode from ReadonlyContext."""
+    try:
+        current_mode = ctx.state.get("current_mode", "navigation")
+    except AttributeError:
+        # Fallback if called with a plain dict (e.g., tests)
+        current_mode = ctx.get("current_mode", "navigation") if isinstance(ctx, dict) else "navigation"
     return get_prompt(current_mode)
 
 
