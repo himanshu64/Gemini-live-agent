@@ -72,15 +72,16 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write  # Required for Workload Identity Federation
+      id-token: write
+    env:
+      GCP_PROJECT: ${{ secrets.GOOGLE_CLOUD_PROJECT }}
+      GCP_REGION: ${{ secrets.GOOGLE_CLOUD_LOCATION }}
+      GCS_BUCKET: ${{ secrets.GCS_BUCKET }}
+      API_TOKEN: ${{ secrets.API_TOKEN }}
 
     steps:
       - uses: actions/checkout@v5
 
-      # WIF auth — no service account keys stored anywhere.
-      # These 2 values are resource identifiers (not credentials).
-      # Option A: hardcode them below (they're not secret).
-      # Option B: use GitHub Secrets if you prefer not to expose them.
       - id: auth
         name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v3
@@ -91,6 +92,12 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v3
 
+      - name: Debug secrets
+        run: |
+          echo "Project length: ${#GCP_PROJECT}"
+          echo "Region length: ${#GCP_REGION}"
+          echo "Project starts with: ${GCP_PROJECT:0:3}***"
+
       - name: Enable required APIs
         run: |
           gcloud services enable \
@@ -100,20 +107,19 @@ jobs:
             aiplatform.googleapis.com \
             firestore.googleapis.com \
             storage.googleapis.com \
-            --project=${{ secrets.GOOGLE_CLOUD_PROJECT }} \
+            --project="$GCP_PROJECT" \
             --quiet
 
-      # Deploy backend to Cloud Run
       - name: Deploy backend
         run: |
           gcloud run deploy sightline-backend \
             --quiet \
             --source=./backend \
-            --project=${{ secrets.GOOGLE_CLOUD_PROJECT }} \
-            --region=${{ secrets.GOOGLE_CLOUD_LOCATION }} \
+            --project="$GCP_PROJECT" \
+            --region="$GCP_REGION" \
             --platform=managed \
             --allow-unauthenticated \
-            --set-env-vars="GOOGLE_CLOUD_PROJECT=${{ secrets.GOOGLE_CLOUD_PROJECT }},GOOGLE_CLOUD_LOCATION=${{ secrets.GOOGLE_CLOUD_LOCATION }},GCS_BUCKET=${{ secrets.GCS_BUCKET }},API_TOKEN=${{ secrets.API_TOKEN }}" \
+            --set-env-vars="GOOGLE_CLOUD_PROJECT=$GCP_PROJECT,GOOGLE_CLOUD_LOCATION=$GCP_REGION,GCS_BUCKET=$GCS_BUCKET,API_TOKEN=$API_TOKEN" \
             --min-instances=0 \
             --max-instances=4 \
             --concurrency=20 \
@@ -122,44 +128,41 @@ jobs:
             --timeout=3600 \
             --session-affinity
 
-      # Get backend URL for frontend config
       - name: Get backend URL
         id: backend
         run: |
           URL=$(gcloud run services describe sightline-backend \
-            --project=${{ secrets.GOOGLE_CLOUD_PROJECT }} \
-            --region=${{ secrets.GOOGLE_CLOUD_LOCATION }} \
+            --project="$GCP_PROJECT" \
+            --region="$GCP_REGION" \
             --format="value(status.url)")
           WS_URL=$(echo "$URL" | sed 's|https://|wss://|')/ws
           echo "url=$URL" >> "$GITHUB_OUTPUT"
           echo "ws_url=$WS_URL" >> "$GITHUB_OUTPUT"
 
-      # Deploy frontend to Cloud Run
       - name: Deploy frontend
         run: |
           gcloud run deploy sightline-frontend \
             --quiet \
             --source=./frontend \
-            --project=${{ secrets.GOOGLE_CLOUD_PROJECT }} \
-            --region=${{ secrets.GOOGLE_CLOUD_LOCATION }} \
+            --project="$GCP_PROJECT" \
+            --region="$GCP_REGION" \
             --platform=managed \
             --allow-unauthenticated \
-            --set-env-vars="NEXT_PUBLIC_WS_URL=${{ steps.backend.outputs.ws_url }},NEXT_PUBLIC_API_TOKEN=${{ secrets.API_TOKEN }}" \
+            --set-env-vars="NEXT_PUBLIC_WS_URL=${{ steps.backend.outputs.ws_url }},NEXT_PUBLIC_API_TOKEN=$API_TOKEN" \
             --min-instances=0 \
             --max-instances=2 \
             --memory=256Mi \
             --cpu=1
 
-      # Update backend CORS with frontend URL
       - name: Update backend CORS
         run: |
           FRONTEND_URL=$(gcloud run services describe sightline-frontend \
-            --project=${{ secrets.GOOGLE_CLOUD_PROJECT }} \
-            --region=${{ secrets.GOOGLE_CLOUD_LOCATION }} \
+            --project="$GCP_PROJECT" \
+            --region="$GCP_REGION" \
             --format="value(status.url)")
           gcloud run services update sightline-backend --quiet \
-            --project=${{ secrets.GOOGLE_CLOUD_PROJECT }} \
-            --region=${{ secrets.GOOGLE_CLOUD_LOCATION }} \
+            --project="$GCP_PROJECT" \
+            --region="$GCP_REGION" \
             --update-env-vars="FRONTEND_ORIGIN=$FRONTEND_URL"
 
       - name: Health check
