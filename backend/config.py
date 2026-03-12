@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     GOOGLE_CLOUD_PROJECT: str
     GOOGLE_CLOUD_LOCATION: str = "us-central1"
     GCS_BUCKET: str
-    FRONTEND_ORIGIN: str = "http://localhost:3000"
+    FRONTEND_ORIGIN: str = "*"
 
     # Auth
     API_TOKEN: str

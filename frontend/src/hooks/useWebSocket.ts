@@ -9,7 +9,9 @@ export type WSMessage =
   | { type: "interrupted" }
   | { type: "status"; status: string }
   | { type: "mode"; mode: string }
-  | { type: "error"; message: string };
+  | { type: "error"; message: string }
+  | { type: "ping" }
+  | { type: "pong" };
 
 type ConnectionState = "connecting" | "connected" | "disconnected";
 
@@ -25,42 +27,79 @@ export function useWebSocket(onMessage: (msg: WSMessage) => void) {
   const connectRef = useRef<() => void>(undefined);
 
   const connect = useCallback(() => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) return;
+    if (wsRef.current?.readyState === WebSocket.OPEN) return Promise.resolve();
 
-    setConnectionState("connecting");
-    const wsUrl = API_TOKEN ? `${WS_URL}?token=${encodeURIComponent(API_TOKEN)}` : WS_URL;
-    const ws = new WebSocket(wsUrl);
-    wsRef.current = ws;
+    return new Promise<void>((resolve, reject) => {
+      setConnectionState("connecting");
+      const wsUrl = API_TOKEN ? `${WS_URL}?token=${encodeURIComponent(API_TOKEN)}` : WS_URL;
+      console.log("[WS] Connecting to:", wsUrl.replace(/token=.*/, "token=***"));
+      const ws = new WebSocket(wsUrl);
+      wsRef.current = ws;
 
-    ws.onopen = () => {
-      setConnectionState("connected");
-      retriesRef.current = 0;
-    };
+      const timeout = setTimeout(() => {
+        if (ws.readyState !== WebSocket.OPEN) {
+          console.error("[WS] Connection timeout after 10s");
+          ws.close();
+          reject(new Error("WebSocket connection timeout"));
+        }
+      }, 10000);
 
-    ws.onmessage = (event) => {
-      try {
-        const msg = JSON.parse(event.data) as WSMessage;
-        onMessageRef.current(msg);
-      } catch {
-        console.error("Failed to parse WS message");
-      }
-    };
+      ws.onopen = () => {
+        clearTimeout(timeout);
+        console.log("[WS] Connected, waiting for server ready signal...");
+        // Don't set "connected" yet — wait for the server "ready" status
+      };
 
-    ws.onclose = () => {
-      setConnectionState("disconnected");
-      wsRef.current = null;
-      // Reconnect with exponential backoff
-      const delay = Math.min(
-        RECONNECT_BASE_DELAY * Math.pow(2, retriesRef.current),
-        RECONNECT_MAX_DELAY
-      );
-      retriesRef.current++;
-      setTimeout(() => connectRef.current?.(), delay);
-    };
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data) as WSMessage;
 
-    ws.onerror = () => {
-      ws.close();
-    };
+          // Handle keepalive pings from server
+          if (msg.type === "ping") {
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({ type: "pong" }));
+            }
+            return;
+          }
+
+          // Handle the "ready" signal — session is fully initialized
+          if (msg.type === "status" && msg.status === "ready") {
+            console.log("[WS] Server ready — session initialized");
+            setConnectionState("connected");
+            retriesRef.current = 0;
+            resolve();
+            // Still forward to handler
+          }
+
+          onMessageRef.current(msg);
+        } catch {
+          console.error("[WS] Failed to parse message:", event.data?.slice?.(0, 100));
+        }
+      };
+
+      ws.onclose = (event) => {
+        clearTimeout(timeout);
+        console.log(`[WS] Closed: code=${event.code} reason=${event.reason}`);
+        setConnectionState("disconnected");
+        wsRef.current = null;
+        // Reconnect with exponential backoff
+        if (retriesRef.current < Infinity) {
+          const delay = Math.min(
+            RECONNECT_BASE_DELAY * Math.pow(2, retriesRef.current),
+            RECONNECT_MAX_DELAY
+          );
+          retriesRef.current++;
+          console.log(`[WS] Reconnecting in ${delay}ms (attempt ${retriesRef.current})`);
+          setTimeout(() => connectRef.current?.(), delay);
+        }
+      };
+
+      ws.onerror = (err) => {
+        clearTimeout(timeout);
+        console.error("[WS] Error:", err);
+        ws.close();
+      };
+    });
   }, []);
 
   useEffect(() => {

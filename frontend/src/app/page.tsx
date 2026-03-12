@@ -35,6 +35,10 @@ export default function Home() {
           if (msg.status === "listening") setIsListening(true);
           else if (msg.status === "processing") setIsListening(false);
           break;
+        case "error":
+          console.error("[Agent Error]", msg.message);
+          setTranscript(`Error: ${msg.message}`);
+          break;
       }
     },
     [playAudio, stopAudioPlayback]
@@ -63,10 +67,16 @@ export default function Home() {
   const { isActive: micActive, start: startMic, stop: stopMic } = useMicrophone(handleAudioChunk);
 
   const handleStart = useCallback(async () => {
-    connect();
-    await startCamera();
-    await startMic();
-    setIsListening(true);
+    try {
+      // Wait for WebSocket to connect AND server to confirm session ready
+      await connect();
+      // Only start camera/mic after connection is established
+      await startCamera();
+      await startMic();
+      setIsListening(true);
+    } catch (err) {
+      console.error("Failed to start:", err);
+    }
   }, [connect, startCamera, startMic]);
 
   const handleStop = useCallback(() => {
