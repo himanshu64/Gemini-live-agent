@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [main]
 
+env:
+  AR_REPO: sightline
+  BACKEND_IMAGE: sightline-backend
+  FRONTEND_IMAGE: sightline-frontend
+
 jobs:
   # ─────────────────────────────────────────────
   # Job 1: Lint & Test (runs on PRs and pushes)
@@ -36,7 +41,7 @@ jobs:
         run: python -m py_compile main.py
 
       - name: Run tests
-        run: pytest --tb=short -q || true
+        run: pytest --tb=short -q
 
   lint-test-frontend:
     name: Lint & Test Frontend
@@ -64,6 +69,8 @@ jobs:
 
   # ─────────────────────────────────────────────
   # Job 2: Deploy to Cloud Run (on push to main)
+  # Strategy: docker build → push to Artifact Registry → deploy image
+  # This avoids Cloud Build permission issues with WIF.
   # ─────────────────────────────────────────────
   deploy:
     name: Deploy to Cloud Run
@@ -76,8 +83,6 @@ jobs:
     env:
       GCP_PROJECT: ${{ secrets.GOOGLE_CLOUD_PROJECT }}
       GCP_REGION: ${{ secrets.GOOGLE_CLOUD_LOCATION }}
-      GCS_BUCKET: ${{ secrets.GCS_BUCKET }}
-      API_TOKEN: ${{ secrets.API_TOKEN }}
 
     steps:
       - uses: actions/checkout@v5
@@ -88,38 +93,73 @@ jobs:
         with:
           workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
           service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+          token_format: access_token
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v3
 
-      - name: Debug secrets
-        run: |
-          echo "Project length: ${#GCP_PROJECT}"
-          echo "Region length: ${#GCP_REGION}"
-          echo "Project starts with: ${GCP_PROJECT:0:3}***"
+      - name: Authenticate Docker to Artifact Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.GOOGLE_CLOUD_LOCATION }}-docker.pkg.dev
+          username: oauth2accesstoken
+          password: ${{ steps.auth.outputs.access_token }}
 
-      - name: Enable required APIs
+      - name: Ensure Artifact Registry repository exists
         run: |
-          gcloud services enable \
-            run.googleapis.com \
-            cloudbuild.googleapis.com \
-            artifactregistry.googleapis.com \
-            aiplatform.googleapis.com \
-            firestore.googleapis.com \
-            storage.googleapis.com \
+          gcloud artifacts repositories describe "$AR_REPO" \
             --project="$GCP_PROJECT" \
+            --location="$GCP_REGION" \
+            --format="value(name)" 2>/dev/null \
+          || gcloud artifacts repositories create "$AR_REPO" \
+            --project="$GCP_PROJECT" \
+            --location="$GCP_REGION" \
+            --repository-format=docker \
+            --description="SightLine container images" \
             --quiet
 
+      # ── Build & push images (parallel via docker buildx) ──
+      - name: Set image tags
+        id: tags
+        run: |
+          SHA="${GITHUB_SHA::8}"
+          REGISTRY="${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT}/${AR_REPO}"
+          echo "backend=${REGISTRY}/${BACKEND_IMAGE}:${SHA}" >> "$GITHUB_OUTPUT"
+          echo "backend_latest=${REGISTRY}/${BACKEND_IMAGE}:latest" >> "$GITHUB_OUTPUT"
+          echo "frontend=${REGISTRY}/${FRONTEND_IMAGE}:${SHA}" >> "$GITHUB_OUTPUT"
+          echo "frontend_latest=${REGISTRY}/${FRONTEND_IMAGE}:latest" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          tags: |
+            ${{ steps.tags.outputs.backend }}
+            ${{ steps.tags.outputs.backend_latest }}
+
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: true
+          tags: |
+            ${{ steps.tags.outputs.frontend }}
+            ${{ steps.tags.outputs.frontend_latest }}
+          build-args: |
+            NEXT_PUBLIC_WS_URL=placeholder
+
+      # ── Deploy backend to Cloud Run ──
       - name: Deploy backend
         run: |
           gcloud run deploy sightline-backend \
             --quiet \
-            --source=./backend \
+            --image="${{ steps.tags.outputs.backend }}" \
             --project="$GCP_PROJECT" \
             --region="$GCP_REGION" \
-            --platform=managed \
             --allow-unauthenticated \
-            --set-env-vars="GOOGLE_CLOUD_PROJECT=$GCP_PROJECT,GOOGLE_CLOUD_LOCATION=$GCP_REGION,GCS_BUCKET=$GCS_BUCKET,API_TOKEN=$API_TOKEN" \
+            --set-env-vars="GOOGLE_CLOUD_PROJECT=$GCP_PROJECT,GOOGLE_CLOUD_LOCATION=$GCP_REGION,GCS_BUCKET=${{ secrets.GCS_BUCKET }}" \
+            --set-secrets="API_TOKEN=sightline-api-token:latest" \
             --min-instances=0 \
             --max-instances=4 \
             --concurrency=20 \
@@ -139,21 +179,35 @@ jobs:
           echo "url=$URL" >> "$GITHUB_OUTPUT"
           echo "ws_url=$WS_URL" >> "$GITHUB_OUTPUT"
 
+      # ── Rebuild frontend with real backend URL baked in ──
+      - name: Rebuild and push frontend with backend URL
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: true
+          tags: |
+            ${{ steps.tags.outputs.frontend }}
+            ${{ steps.tags.outputs.frontend_latest }}
+          build-args: |
+            NEXT_PUBLIC_WS_URL=${{ steps.backend.outputs.ws_url }}
+            NEXT_PUBLIC_API_URL=${{ steps.backend.outputs.url }}
+
+      # ── Deploy frontend to Cloud Run ──
       - name: Deploy frontend
         run: |
           gcloud run deploy sightline-frontend \
             --quiet \
-            --source=./frontend \
+            --image="${{ steps.tags.outputs.frontend }}" \
             --project="$GCP_PROJECT" \
             --region="$GCP_REGION" \
-            --platform=managed \
             --allow-unauthenticated \
-            --set-env-vars="NEXT_PUBLIC_WS_URL=${{ steps.backend.outputs.ws_url }},NEXT_PUBLIC_API_TOKEN=$API_TOKEN" \
             --min-instances=0 \
             --max-instances=2 \
             --memory=256Mi \
-            --cpu=1
+            --cpu=1 \
+            --port=3000
 
+      # ── Update backend CORS with frontend URL ──
       - name: Update backend CORS
         run: |
           FRONTEND_URL=$(gcloud run services describe sightline-frontend \
@@ -165,7 +219,12 @@ jobs:
             --region="$GCP_REGION" \
             --update-env-vars="FRONTEND_ORIGIN=$FRONTEND_URL"
 
+      # ── Verify deployment ──
       - name: Health check
         run: |
           echo "Backend: ${{ steps.backend.outputs.url }}"
-          curl -sf "${{ steps.backend.outputs.url }}/health" || echo "Backend not healthy yet (cold start expected)"
+          # Wait for cold start
+          sleep 5
+          curl -sf --retry 3 --retry-delay 5 "${{ steps.backend.outputs.url }}/health"
+          echo ""
+          echo "Deployment successful!"
