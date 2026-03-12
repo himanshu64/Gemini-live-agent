@@ -91,10 +91,23 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
+      - name: Enable required APIs
+        run: |
+          gcloud services enable \
+            run.googleapis.com \
+            cloudbuild.googleapis.com \
+            artifactregistry.googleapis.com \
+            aiplatform.googleapis.com \
+            firestore.googleapis.com \
+            storage.googleapis.com \
+            --project=${{ secrets.GOOGLE_CLOUD_PROJECT }} \
+            --quiet
+
       # Deploy backend to Cloud Run
       - name: Deploy backend
         run: |
           gcloud run deploy sightline-backend \
+            --quiet \
             --source=./backend \
             --project=${{ secrets.GOOGLE_CLOUD_PROJECT }} \
             --region=${{ secrets.GOOGLE_CLOUD_LOCATION }} \
@@ -125,6 +138,7 @@ jobs:
       - name: Deploy frontend
         run: |
           gcloud run deploy sightline-frontend \
+            --quiet \
             --source=./frontend \
             --project=${{ secrets.GOOGLE_CLOUD_PROJECT }} \
             --region=${{ secrets.GOOGLE_CLOUD_LOCATION }} \
@@ -143,7 +157,7 @@ jobs:
             --project=${{ secrets.GOOGLE_CLOUD_PROJECT }} \
             --region=${{ secrets.GOOGLE_CLOUD_LOCATION }} \
             --format="value(status.url)")
-          gcloud run services update sightline-backend \
+          gcloud run services update sightline-backend --quiet \
             --project=${{ secrets.GOOGLE_CLOUD_PROJECT }} \
             --region=${{ secrets.GOOGLE_CLOUD_LOCATION }} \
             --update-env-vars="FRONTEND_ORIGIN=$FRONTEND_URL"
