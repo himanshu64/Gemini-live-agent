@@ -68,10 +68,10 @@ gcloud run deploy sightline-backend \
   --platform=managed \
   --allow-unauthenticated \
   --set-env-vars="GOOGLE_CLOUD_PROJECT=$PROJECT_ID,GOOGLE_CLOUD_LOCATION=$REGION,GCS_BUCKET=$BUCKET_NAME,API_TOKEN=$API_TOKEN" \
-  --min-instances=1 \
-  --max-instances=10 \
+  --min-instances=0 \
+  --max-instances=4 \
   --concurrency=20 \
-  --memory=1Gi \
+  --memory=512Mi \
   --cpu=1 \
   --timeout=3600 \
   --session-affinity
@@ -96,8 +96,8 @@ gcloud run deploy sightline-frontend \
   --allow-unauthenticated \
   --set-env-vars="NEXT_PUBLIC_WS_URL=$WS_URL,NEXT_PUBLIC_API_TOKEN=$API_TOKEN" \
   --min-instances=0 \
-  --max-instances=5 \
-  --memory=512Mi \
+  --max-instances=2 \
+  --memory=256Mi \
   --cpu=1
 
 FRONTEND_URL=$(gcloud run services describe sightline-frontend \
