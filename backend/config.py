@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     GCS_BUCKET: str
     FRONTEND_ORIGIN: str = "*"
 
-    # Auth (optional — if empty, WebSocket auth is skipped)
+    # Auth
     API_TOKEN: str = ""
 
     # WebSocket limits
