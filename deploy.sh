@@ -30,7 +30,8 @@ gcloud services enable \
   firestore.googleapis.com \
   storage.googleapis.com \
   cloudbuild.googleapis.com \
-  --project="$PROJECT_ID"
+  artifactregistry.googleapis.com \
+  --project="$PROJECT_ID" --quiet
 
 # Deploy Firestore security rules
 echo "==> Deploying Firestore security rules..."
@@ -61,7 +62,7 @@ fi
 
 # Build and deploy backend
 echo "==> Building and deploying backend..."
-gcloud run deploy sightline-backend \
+gcloud run deploy sightline-backend --quiet \
   --source=./backend \
   --project="$PROJECT_ID" \
   --region="$REGION" \
@@ -88,7 +89,7 @@ echo "==> Backend deployed at: $BACKEND_URL"
 
 # Build and deploy frontend
 echo "==> Building and deploying frontend..."
-gcloud run deploy sightline-frontend \
+gcloud run deploy sightline-frontend --quiet \
   --source=./frontend \
   --project="$PROJECT_ID" \
   --region="$REGION" \
@@ -107,7 +108,7 @@ FRONTEND_URL=$(gcloud run services describe sightline-frontend \
 
 # Update backend with frontend origin for CORS
 echo "==> Updating backend CORS..."
-gcloud run services update sightline-backend \
+gcloud run services update sightline-backend --quiet \
   --project="$PROJECT_ID" \
   --region="$REGION" \
   --update-env-vars="FRONTEND_ORIGIN=$FRONTEND_URL"
