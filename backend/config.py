@@ -11,8 +11,8 @@ class Settings(BaseSettings):
     GCS_BUCKET: str
     FRONTEND_ORIGIN: str = "*"
 
-    # Auth
-    API_TOKEN: str
+    # Auth (optional — if empty, WebSocket auth is skipped)
+    API_TOKEN: str = ""
 
     # WebSocket limits
     WS_MAX_MESSAGE_BYTES: int = 1_048_576  # 1 MB

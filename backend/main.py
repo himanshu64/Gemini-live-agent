@@ -208,8 +208,8 @@ async def websocket_endpoint(ws: WebSocket, token: str = Query("")) -> None:
     """Bidirectional audio/video streaming via WebSocket."""
     await ws.accept()
 
-    # --- Token authentication ---
-    if not token or token != config.API_TOKEN:
+    # --- Token authentication (optional — skip if API_TOKEN is not configured) ---
+    if config.API_TOKEN and token != config.API_TOKEN:
         client_host = ws.client.host if ws.client else "unknown"
         logger.warning(
             "Rejected WebSocket connection: invalid token from %s", client_host
