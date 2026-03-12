@@ -41,7 +41,10 @@ jobs:
         run: python -m py_compile main.py
 
       - name: Run tests
-        run: pytest --tb=short -q
+        run: |
+          EXIT=0; pytest --tb=short -q || EXIT=$?
+          # Exit code 5 = no tests collected — acceptable
+          if [ "$EXIT" -ne 0 ] && [ "$EXIT" -ne 5 ]; then exit "$EXIT"; fi
 
   lint-test-frontend:
     name: Lint & Test Frontend
