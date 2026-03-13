@@ -198,6 +198,7 @@ jobs:
             NEXT_PUBLIC_FIREBASE_API_KEY=${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
             NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
             NEXT_PUBLIC_FIREBASE_PROJECT_ID=${{ secrets.GOOGLE_CLOUD_PROJECT }}
+            NEXT_PUBLIC_GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
 
       # ── Deploy frontend to Cloud Run ──
       - name: Get frontend URL for NextAuth
@@ -219,8 +220,7 @@ jobs:
             --project="$GCP_PROJECT" \
             --region="$GCP_REGION" \
             --allow-unauthenticated \
-            --set-env-vars="NEXTAUTH_URL=${FRONTEND_URL}" \
-            --set-secrets="NEXTAUTH_SECRET=nextauth-secret:latest,GOOGLE_CLIENT_ID=google-client-id:latest,GOOGLE_CLIENT_SECRET=google-client-secret:latest" \
+            --set-env-vars="NODE_ENV=production" \
             --min-instances=0 \
             --max-instances=2 \
             --memory=256Mi \

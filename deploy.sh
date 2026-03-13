@@ -32,9 +32,10 @@ fi
 # Fetch GOOGLE_CLIENT_ID from Secret Manager if not set
 if [ -z "${GOOGLE_CLIENT_ID:-}" ]; then
   echo "==> Fetching GOOGLE_CLIENT_ID from Secret Manager..."
-  GOOGLE_CLIENT_ID="$(gcloud secrets versions access latest --secret=google-client-id --project="$PROJECT_ID" 2>/dev/null || true)"
+  GOOGLE_CLIENT_ID="$(gcloud secrets versions access latest --secret=NEXT_PUBLIC_GOOGLE_CLIENT_ID --project="$PROJECT_ID" 2>/dev/null || \
+                      gcloud secrets versions access latest --secret=google-client-id --project="$PROJECT_ID" 2>/dev/null || true)"
   if [ -z "$GOOGLE_CLIENT_ID" ]; then
-    echo "WARNING: GOOGLE_CLIENT_ID not found in env or Secret Manager (google-client-id). Google login will not work."
+    echo "WARNING: GOOGLE_CLIENT_ID not found in env or Secret Manager. Google login will not work."
   fi
 fi
 
