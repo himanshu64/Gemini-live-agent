@@ -29,6 +29,21 @@ if [ -z "${NEXT_PUBLIC_FIREBASE_API_KEY:-}" ] || \
   exit 1
 fi
 
+# Fetch GOOGLE_CLIENT_ID from Secret Manager if not set
+if [ -z "${GOOGLE_CLIENT_ID:-}" ]; then
+  echo "==> Fetching GOOGLE_CLIENT_ID from Secret Manager..."
+  GOOGLE_CLIENT_ID="$(gcloud secrets versions access latest --secret=google-client-id --project="$PROJECT_ID" 2>/dev/null || true)"
+  if [ -z "$GOOGLE_CLIENT_ID" ]; then
+    echo "WARNING: GOOGLE_CLIENT_ID not found in env or Secret Manager (google-client-id). Google login will not work."
+  fi
+fi
+
+# Fetch JWT_SECRET from Secret Manager if not set
+if [ -z "${JWT_SECRET:-}" ]; then
+  echo "==> Fetching JWT_SECRET from Secret Manager..."
+  JWT_SECRET="$(gcloud secrets versions access latest --secret=jwt-secret --project="$PROJECT_ID" 2>/dev/null || true)"
+fi
+
 echo "==> Deploying SightLine to project: $PROJECT_ID, region: $REGION"
 
 # Enable required APIs
@@ -41,6 +56,7 @@ gcloud services enable \
   cloudbuild.googleapis.com \
   artifactregistry.googleapis.com \
   identitytoolkit.googleapis.com \
+  secretmanager.googleapis.com \
   --project="$PROJECT_ID" --quiet
 
 # Deploy Firestore security rules
