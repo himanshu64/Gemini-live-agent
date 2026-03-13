@@ -87,6 +87,36 @@ async def get_preferences(session_id: str) -> dict[str, Any]:
     return preferences
 
 
+async def save_user_preference(uid: str, key: str, value: Any) -> None:
+    """Write a single preference for a user (user-level, not session-level)."""
+    _validate_key(key)
+    client = get_client()
+    pref_ref = (
+        client.collection("users")
+        .document(uid)
+        .collection("preferences")
+        .document(key)
+    )
+    await pref_ref.set({"value": value}, merge=True)
+    logger.info("User preference saved: uid=%s key=%s", uid, key)
+
+
+async def get_user_preferences(uid: str) -> dict[str, Any]:
+    """Read all preferences for a user."""
+    client = get_client()
+    prefs_ref = (
+        client.collection("users")
+        .document(uid)
+        .collection("preferences")
+    )
+    docs = prefs_ref.stream()
+    preferences: dict[str, Any] = {}
+    async for doc in docs:
+        data = doc.to_dict()
+        preferences[doc.id] = data.get("value") if data else None
+    return preferences
+
+
 async def log_event(
     session_id: str, event_type: str, data: dict[str, Any] | None = None
 ) -> None:

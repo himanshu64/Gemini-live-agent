@@ -20,6 +20,15 @@ if [ -z "${API_TOKEN:-}" ]; then
   exit 1
 fi
 
+# Require Firebase config for frontend auth
+if [ -z "${NEXT_PUBLIC_FIREBASE_API_KEY:-}" ] || \
+   [ -z "${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN:-}" ] || \
+   [ -z "${NEXT_PUBLIC_FIREBASE_PROJECT_ID:-}" ]; then
+  echo "ERROR: Firebase environment variables must be set before deploying."
+  echo "  Required: NEXT_PUBLIC_FIREBASE_API_KEY, NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN, NEXT_PUBLIC_FIREBASE_PROJECT_ID"
+  exit 1
+fi
+
 echo "==> Deploying SightLine to project: $PROJECT_ID, region: $REGION"
 
 # Enable required APIs
@@ -68,7 +77,8 @@ gcloud run deploy sightline-backend --quiet \
   --region="$REGION" \
   --platform=managed \
   --allow-unauthenticated \
-  --set-env-vars="GOOGLE_CLOUD_PROJECT=$PROJECT_ID,GOOGLE_CLOUD_LOCATION=$REGION,GCS_BUCKET=$BUCKET_NAME,API_TOKEN=$API_TOKEN,GOOGLE_GENAI_USE_VERTEXAI=TRUE" \
+  --set-env-vars="GOOGLE_CLOUD_PROJECT=$PROJECT_ID,GOOGLE_CLOUD_LOCATION=$REGION,GCS_BUCKET=$BUCKET_NAME,API_TOKEN=$API_TOKEN,GOOGLE_GENAI_USE_VERTEXAI=TRUE,TURNSTILE_SECRET_KEY=${TURNSTILE_SECRET_KEY:-}" \
+  --update-secrets="ADMIN_EMAILS=ADMIN_EMAILS:latest" \
   --min-instances=0 \
   --max-instances=4 \
   --concurrency=20 \
@@ -88,6 +98,7 @@ WS_URL=$(echo "$BACKEND_URL" | sed 's|https://|wss://|')/ws
 echo "==> Backend deployed at: $BACKEND_URL"
 
 # Build and deploy frontend
+# NEXT_PUBLIC_* vars must be set at build time (baked into JS bundles by Next.js)
 echo "==> Building and deploying frontend..."
 gcloud run deploy sightline-frontend --quiet \
   --source=./frontend \
@@ -95,7 +106,8 @@ gcloud run deploy sightline-frontend --quiet \
   --region="$REGION" \
   --platform=managed \
   --allow-unauthenticated \
-  --set-env-vars="NEXT_PUBLIC_WS_URL=$WS_URL,NEXT_PUBLIC_API_TOKEN=$API_TOKEN" \
+  --set-build-env-vars="NEXT_PUBLIC_WS_URL=$WS_URL,NEXT_PUBLIC_API_URL=$BACKEND_URL,NEXT_PUBLIC_API_TOKEN=$API_TOKEN,NEXT_PUBLIC_FIREBASE_API_KEY=$NEXT_PUBLIC_FIREBASE_API_KEY,NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=$NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,NEXT_PUBLIC_FIREBASE_PROJECT_ID=$NEXT_PUBLIC_FIREBASE_PROJECT_ID,NEXT_PUBLIC_TURNSTILE_SITE_KEY=${NEXT_PUBLIC_TURNSTILE_SITE_KEY:-}" \
+  --set-env-vars="NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-$(openssl rand -base64 32)},NEXTAUTH_URL=${NEXTAUTH_URL:-}" \
   --min-instances=0 \
   --max-instances=2 \
   --memory=256Mi \

@@ -1,11 +1,19 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import { useSession, signOut } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { API_URL } from "@/lib/constants";
 import Image from "next/image";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress, ProgressLabel, ProgressValue } from "@/components/ui/progress";
+
+interface FrameData {
+  name: string;
+  url: string;
+  created: string | null;
+  size: number;
+}
 
 interface UsageData {
   uid: string;
@@ -21,24 +29,14 @@ function formatTime(seconds: number): string {
   return `${m}m ${s}s`;
 }
 
-function UsageBar({ used, limit }: { used: number; limit: number }) {
-  const pct = limit > 0 ? Math.min(100, (used / limit) * 100) : 0;
-  const color = pct > 90 ? "bg-red-500" : pct > 70 ? "bg-amber-500" : "bg-blue-500";
-
-  return (
-    <div className="w-full rounded-full bg-gray-800 h-4" role="progressbar" aria-valuenow={used} aria-valuemin={0} aria-valuemax={limit} aria-label={`${formatTime(used)} of ${formatTime(limit)} used`}>
-      <div className={`h-4 rounded-full transition-all ${color}`} style={{ width: `${pct}%` }} />
-    </div>
-  );
-}
-
 export default function DashboardPage() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
-  const { uid, getToken } = useAuth();
+  const { user, uid, isAnonymous, loading, getToken, signInWithGoogle, handleSignOut } = useAuth();
   const [usage, setUsage] = useState<UsageData | null>(null);
   const [error, setError] = useState("");
   const [fetching, setFetching] = useState(false);
+  const [frames, setFrames] = useState<FrameData[]>([]);
+  const [framesLoading, setFramesLoading] = useState(false);
+  const [deletingFrame, setDeletingFrame] = useState<string | null>(null);
 
   const fetchUsage = useCallback(async () => {
     if (!uid) return;
@@ -59,111 +57,234 @@ export default function DashboardPage() {
     }
   }, [uid, getToken]);
 
-  // Redirect to sign-in if not authenticated
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/auth/signin?callbackUrl=/dashboard");
+  const fetchFrames = useCallback(async () => {
+    if (!uid) return;
+    setFramesLoading(true);
+    try {
+      const token = await getToken();
+      const res = await fetch(`${API_URL}/api/frames`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setFrames(data.frames ?? []);
+    } catch {
+      // silent — frames section is non-critical
+    } finally {
+      setFramesLoading(false);
     }
-  }, [status, router]);
+  }, [uid, getToken]);
+
+  const deleteFrame = useCallback(async (name: string) => {
+    setDeletingFrame(name);
+    try {
+      const token = await getToken();
+      const res = await fetch(`${API_URL}/api/frames`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setFrames((prev) => prev.filter((f) => f.name !== name));
+    } catch {
+      // silent
+    } finally {
+      setDeletingFrame(null);
+    }
+  }, [getToken]);
 
   useEffect(() => {
-    if (uid) fetchUsage();
-  }, [uid, fetchUsage]);
+    if (uid) {
+      fetchUsage();
+      fetchFrames();
+    }
+  }, [uid, fetchUsage, fetchFrames]);
 
-  if (status === "loading") {
+  if (loading) {
     return (
       <main className="flex min-h-dvh items-center justify-center" aria-busy="true">
-        <p className="text-xl text-gray-400">Loading...</p>
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-foreground/20 border-t-foreground" />
+          <p className="text-sm text-muted-foreground">Loading...</p>
+        </div>
       </main>
     );
   }
 
-  if (status === "unauthenticated") return null;
+  const usedPct = usage && usage.today_seconds_limit > 0
+    ? Math.min(100, (usage.today_seconds_used / usage.today_seconds_limit) * 100)
+    : 0;
 
   return (
     <main className="flex min-h-dvh flex-col">
-      <header className="flex items-center justify-between border-b border-gray-800 px-4 py-3">
-        <h1 className="text-2xl font-bold text-white">Dashboard</h1>
+      <header className="flex items-center justify-between px-5 py-4">
+        <h1 className="font-serif text-2xl italic text-foreground">Dashboard</h1>
         <div className="flex items-center gap-2">
-          <Link href="/" className="rounded-lg bg-gray-800 px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 min-h-[44px] flex items-center">
-            Back to App
-          </Link>
-          <button
-            onClick={() => signOut({ callbackUrl: "/" })}
-            className="rounded-lg bg-gray-800 px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 min-h-[44px]"
-          >
-            Sign out
-          </button>
+          <Button variant="ghost" size="sm" className="rounded-full text-xs" render={<Link href="/admin" aria-label="Admin dashboard" />}>
+            Admin
+          </Button>
+          <Button variant="ghost" size="sm" className="rounded-full text-xs" render={<Link href="/" />}>
+            Back
+          </Button>
+          {isAnonymous ? (
+            <Button variant="outline" size="sm" className="rounded-full border-foreground/20 text-xs" onClick={signInWithGoogle}>
+              Sign in with Google
+            </Button>
+          ) : (
+            <Button variant="ghost" size="sm" className="rounded-full text-xs" onClick={handleSignOut}>
+              Sign out
+            </Button>
+          )}
         </div>
       </header>
 
-      <div className="flex flex-1 flex-col gap-6 p-4">
-        {/* Account Card */}
-        <section className="rounded-2xl bg-gray-900 border border-gray-800 p-5">
-          <h2 className="text-lg font-semibold text-gray-200 mb-3">Account</h2>
-          <div className="flex flex-col gap-2 text-gray-400">
-            {session?.user?.image && (
-              <div className="flex items-center gap-3 mb-2">
-                <Image src={session.user.image} alt="" width={40} height={40} className="rounded-full" />
-                <div>
-                  <p className="text-gray-200 font-medium">{session.user.name}</p>
-                  <p className="text-sm">{session.user.email}</p>
+      <div className="flex flex-1 flex-col gap-4 px-5 pb-5">
+        {/* Account */}
+        <Card className="bg-card/50 backdrop-blur-sm">
+          <CardHeader>
+            <CardTitle className="font-serif italic text-lg">Account</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col gap-3">
+              {user?.photoURL && (
+                <div className="flex items-center gap-3">
+                  <Image src={user.photoURL} alt="" width={40} height={40} className="rounded-full ring-2 ring-border" />
+                  <div>
+                    <p className="text-sm font-medium text-card-foreground">{user.displayName}</p>
+                    <p className="text-xs text-muted-foreground">{user.email}</p>
+                  </div>
                 </div>
-              </div>
-            )}
-            <p>User ID: <span className="text-gray-200 font-mono text-sm">{uid?.slice(0, 12)}...</span></p>
-            <p>Status: <span className="text-gray-200">{session?.user?.email ? "Signed in" : "Guest"}</span></p>
-            <p>Tier: <span className="text-gray-200 capitalize">{usage?.tier || "free"}</span></p>
-          </div>
-        </section>
-
-        {/* Usage Card */}
-        <section className="rounded-2xl bg-gray-900 border border-gray-800 p-5">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-semibold text-gray-200">Today&apos;s Usage</h2>
-            <button
-              onClick={fetchUsage}
-              disabled={fetching}
-              className="rounded-lg bg-gray-800 px-3 py-1 text-sm text-gray-400 hover:bg-gray-700 disabled:opacity-50"
-            >
-              {fetching ? "..." : "Refresh"}
-            </button>
-          </div>
-
-          {error && <p className="text-red-400 mb-3">{error}</p>}
-
-          {usage ? (
-            <div className="flex flex-col gap-4">
-              <UsageBar used={usage.today_seconds_used} limit={usage.today_seconds_limit} />
-              <div className="grid grid-cols-2 gap-4">
-                <div className="rounded-xl bg-gray-800 p-4 text-center">
-                  <p className="text-2xl font-bold text-white">{formatTime(usage.today_seconds_used)}</p>
-                  <p className="text-sm text-gray-400">Used today</p>
-                </div>
-                <div className="rounded-xl bg-gray-800 p-4 text-center">
-                  <p className="text-2xl font-bold text-white">{usage.today_seconds_remaining >= 0 ? formatTime(usage.today_seconds_remaining) : "Unlimited"}</p>
-                  <p className="text-sm text-gray-400">Remaining</p>
-                </div>
-              </div>
-              <div className="rounded-xl bg-gray-800 p-4 text-center">
-                <p className="text-2xl font-bold text-white">{usage.today_seconds_limit > 0 ? formatTime(usage.today_seconds_limit) : "Unlimited"}</p>
-                <p className="text-sm text-gray-400">Daily limit ({usage.tier} tier)</p>
+              )}
+              <div className="grid grid-cols-2 gap-y-2 text-sm">
+                <span className="text-muted-foreground">User ID</span>
+                <span className="text-card-foreground font-mono text-xs">{uid?.slice(0, 12)}...</span>
+                <span className="text-muted-foreground">Status</span>
+                <span className="text-card-foreground">{user?.email ? "Signed in" : "Guest"}</span>
+                <span className="text-muted-foreground">Tier</span>
+                <span className="inline-flex w-fit items-center rounded-full border border-border bg-muted/50 px-2.5 py-0.5 text-xs font-medium capitalize">{usage?.tier || "free"}</span>
               </div>
             </div>
-          ) : !error ? (
-            <p className="text-gray-500">Loading usage data...</p>
-          ) : null}
-        </section>
+          </CardContent>
+        </Card>
 
-        {/* Plan Details */}
-        <section className="rounded-2xl bg-gray-900 border border-gray-800 p-5">
-          <h2 className="text-lg font-semibold text-gray-200 mb-3">Plan Details</h2>
-          <div className="flex flex-col gap-2 text-gray-400">
-            <p>Free tier: <span className="text-gray-200">30 minutes / day</span></p>
-            <p>Resets: <span className="text-gray-200">Daily at midnight UTC</span></p>
-            <p>Features: <span className="text-gray-200">All modes (Navigate, Read, Shop, Social)</span></p>
-          </div>
-        </section>
+        {/* Usage */}
+        <Card className="bg-card/50 backdrop-blur-sm">
+          <CardHeader className="flex-row items-center justify-between">
+            <CardTitle className="font-serif italic text-lg">Today&apos;s Usage</CardTitle>
+            <Button variant="outline" size="sm" className="rounded-full border-foreground/20 text-xs" onClick={fetchUsage} disabled={fetching}>
+              {fetching ? "..." : "Refresh"}
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {error && <p className="text-destructive text-sm mb-3">{error}</p>}
+
+            {usage ? (
+              <div className="flex flex-col gap-4">
+                <Progress value={usedPct} max={100}>
+                  <ProgressLabel>{formatTime(usage.today_seconds_used)} used</ProgressLabel>
+                  <ProgressValue>
+                    {() =>
+                      usage.today_seconds_remaining >= 0
+                        ? `${formatTime(usage.today_seconds_remaining)} left`
+                        : "Unlimited"
+                    }
+                  </ProgressValue>
+                </Progress>
+
+                <div className="grid grid-cols-3 gap-3">
+                  {[
+                    { value: formatTime(usage.today_seconds_used), label: "Used" },
+                    { value: usage.today_seconds_remaining >= 0 ? formatTime(usage.today_seconds_remaining) : "\u221E", label: "Left" },
+                    { value: usage.today_seconds_limit > 0 ? formatTime(usage.today_seconds_limit) : "\u221E", label: "Limit" },
+                  ].map((stat) => (
+                    <div key={stat.label} className="rounded-xl border border-border bg-muted/30 p-3 text-center">
+                      <p className="text-lg font-bold text-foreground">{stat.value}</p>
+                      <p className="text-[11px] text-muted-foreground uppercase tracking-wider">{stat.label}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : !error ? (
+              <div className="flex items-center gap-2">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-foreground/20 border-t-foreground" />
+                <p className="text-muted-foreground text-sm">Loading usage data...</p>
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
+
+        {/* Plan */}
+        <Card className="bg-card/50 backdrop-blur-sm">
+          <CardHeader>
+            <CardTitle className="font-serif italic text-lg">Plan Details</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-y-2 text-sm">
+              <span className="text-muted-foreground">Free tier</span>
+              <span className="text-card-foreground">30 minutes / day</span>
+              <span className="text-muted-foreground">Resets</span>
+              <span className="text-card-foreground">Daily at midnight UTC</span>
+              <span className="text-muted-foreground">Features</span>
+              <span className="text-card-foreground">All modes</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Captured Frames */}
+        <Card className="bg-card/50 backdrop-blur-sm">
+          <CardHeader className="flex-row items-center justify-between">
+            <CardTitle className="font-serif italic text-lg">Captured Frames</CardTitle>
+            <Button variant="outline" size="sm" className="rounded-full border-foreground/20 text-xs" onClick={fetchFrames} disabled={framesLoading}>
+              {framesLoading ? "..." : "Refresh"}
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {framesLoading && frames.length === 0 ? (
+              <div className="flex items-center gap-2">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-foreground/20 border-t-foreground" />
+                <p className="text-muted-foreground text-sm">Loading frames...</p>
+              </div>
+            ) : frames.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No captured frames yet. The assistant captures frames when you ask it to describe or save what it sees.
+              </p>
+            ) : (
+              <div className="flex flex-col gap-3 max-h-96 overflow-y-auto">
+                {frames.map((frame) => (
+                  <div key={frame.name} className="flex items-center gap-3 rounded-xl border border-border bg-muted/30 p-2">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={frame.url}
+                      alt="Captured frame"
+                      className="h-16 w-16 rounded-lg object-cover"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-card-foreground truncate">
+                        {frame.created ? new Date(frame.created).toLocaleString() : "Unknown date"}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {frame.size ? `${(frame.size / 1024).toFixed(1)} KB` : ""}
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="shrink-0 text-xs text-destructive hover:text-destructive"
+                      onClick={() => deleteFrame(frame.name)}
+                      disabled={deletingFrame === frame.name}
+                      aria-label="Delete frame"
+                    >
+                      {deletingFrame === frame.name ? "..." : "Delete"}
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </main>
   );

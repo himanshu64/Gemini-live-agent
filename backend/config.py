@@ -9,10 +9,16 @@ class Settings(BaseSettings):
     GOOGLE_CLOUD_PROJECT: str
     GOOGLE_CLOUD_LOCATION: str = "us-central1"
     GCS_BUCKET: str
-    FRONTEND_ORIGIN: str = "*"
+    FRONTEND_ORIGIN: str = "http://localhost:3000"
 
     # Auth
     API_TOKEN: str = ""
+
+    # Admin emails (comma-separated list)
+    ADMIN_EMAILS: str = ""
+
+    # Cloudflare Turnstile (invisible CAPTCHA)
+    TURNSTILE_SECRET_KEY: str = ""
 
     # WebSocket limits
     WS_MAX_MESSAGE_BYTES: int = 1_048_576  # 1 MB

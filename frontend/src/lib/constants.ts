@@ -5,8 +5,11 @@ export const SAMPLE_RATE_IN = 16000;   // mic input
 export const SAMPLE_RATE_OUT = 24000;  // audio playback
 export const CAPTURE_FPS = 1;          // camera frames per second
 export const JPEG_QUALITY = 0.6;
+export const CAPTURE_FPS_LOW = 0.5;    // low-power: 1 frame every 2s
+export const JPEG_QUALITY_LOW = 0.4;   // low-power: reduced quality
 export const RECONNECT_BASE_DELAY = 1000;
 export const RECONNECT_MAX_DELAY = 30000;
+export const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "";
 
 export const MODES = ["navigation", "reading", "shopping", "social"] as const;
 export type Mode = (typeof MODES)[number];
@@ -30,4 +33,11 @@ export const MODE_ICONS: Record<Mode, string> = {
   reading: "📖",
   shopping: "🛒",
   social: "👥",
+};
+
+export const MODE_DESCRIPTIONS: Record<Mode, string> = {
+  navigation: "Obstacles & directions",
+  reading: "Signs, labels & text",
+  shopping: "Products & prices",
+  social: "People & expressions",
 };

@@ -3,6 +3,8 @@
  * Used to guide blind users through permission prompts and app state.
  */
 
+export const speechConfig = { rate: 1.1, volume: 1.0 };
+
 export function speak(text: string, interrupt = true) {
   if (typeof window === "undefined" || !window.speechSynthesis) return;
 
@@ -11,9 +13,9 @@ export function speak(text: string, interrupt = true) {
   }
 
   const utterance = new SpeechSynthesisUtterance(text);
-  utterance.rate = 1.1;
+  utterance.rate = speechConfig.rate;
   utterance.pitch = 1.0;
-  utterance.volume = 1.0;
+  utterance.volume = speechConfig.volume;
   // Prefer English voice
   const voices = window.speechSynthesis.getVoices();
   const english = voices.find((v) => v.lang.startsWith("en") && v.default)

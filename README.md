@@ -10,7 +10,8 @@ SightLine is a real-time, voice-driven AI vision assistant designed for **285 mi
 
 ## Demo Video
 
-[Watch the Demo on YouTube](YOUR_YOUTUBE_LINK_HERE) *(max 4 minutes)*
+<!-- Replace with YouTube link after recording -->
+*Demo video coming soon* *(max 4 minutes)*
 
 ---
 
@@ -125,8 +126,8 @@ Switch modes by voice: *"Switch to reading mode"* or tap the mode buttons.
 ### 1. Clone and configure
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/sightline.git
-cd sightline
+git clone https://github.com/himanshu64/Gemini-live-agent.git
+cd Gemini-live-agent
 cp .env.example .env
 ```
 
@@ -266,17 +267,31 @@ sightline/
 │   │   │   ├── globals.css       # Dark theme, high contrast, 64px+ touch targets
 │   │   │   └── api/health/       # Health check endpoint for K8s probes
 │   │   ├── components/
-│   │   │   ├── ModeSelector.tsx  # 2x2 mode grid with distinct colors
-│   │   │   ├── StatusIndicator.tsx # Connection/listening/speaking status
-│   │   │   └── EmergencyButton.tsx # Large red SOS button with haptic
+│   │   │   ├── ModeSelector.tsx     # 2x2 mode grid with distinct colors
+│   │   │   ├── StatusIndicator.tsx  # Connection/listening/speaking status
+│   │   │   ├── EmergencyButton.tsx  # Large red SOS button with haptic
+│   │   │   ├── AudioVisualizer.tsx  # Animated orb for listen/speak/process states
+│   │   │   ├── ConversationLog.tsx  # Scrollable transcript with bookmarks & export
+│   │   │   ├── QuickActions.tsx     # 16 context-aware quick action chips
+│   │   │   ├── OnboardingModal.tsx  # 5-step guided walkthrough
+│   │   │   ├── ToastProvider.tsx    # Floating toast notification system
+│   │   │   ├── CameraPreview.tsx    # Floating PiP camera preview
+│   │   │   ├── CameraControls.tsx   # Flip, torch, preview, low-power buttons
+│   │   │   └── ConnectionQuality.tsx # Real-time latency signal bars
 │   │   ├── hooks/
-│   │   │   ├── useWebSocket.ts   # Auto-reconnect WebSocket with backoff
-│   │   │   ├── useCamera.ts      # Camera → JPEG frames at 1fps
-│   │   │   ├── useMicrophone.ts  # Mic → PCM 16kHz audio chunks
-│   │   │   └── useAudioPlayback.ts # Queue-based 24kHz audio playback
+│   │   │   ├── useWebSocket.ts      # Auto-reconnect WebSocket with backoff + latency
+│   │   │   ├── useCamera.ts         # Camera with flip, torch, low-power mode
+│   │   │   ├── useMicrophone.ts     # Mic → PCM 16kHz audio chunks
+│   │   │   ├── useAudioPlayback.ts  # Queue-based 24kHz audio playback
+│   │   │   ├── useSwipeGesture.ts   # Swipe left/right for mode cycling
+│   │   │   └── useOnlineStatus.ts   # Network connectivity detection
 │   │   └── lib/
-│   │       ├── audioUtils.ts     # PCM encode/decode, base64 conversion
-│   │       └── constants.ts      # Config constants and mode definitions
+│   │       ├── audioUtils.ts        # PCM encode/decode, base64 conversion
+│   │       ├── constants.ts         # Config constants and mode definitions
+│   │       ├── speak.ts             # TTS helper for announcements
+│   │       ├── haptics.ts           # Vibration feedback patterns
+│   │       ├── sounds.ts            # Spatial audio cues (6 sound types)
+│   │       └── exportTranscript.ts  # Export conversation as text file
 │   ├── public/
 │   │   ├── manifest.json         # PWA manifest
 │   │   └── sw.js                 # Service worker for offline support
@@ -311,6 +326,35 @@ SightLine is built for visually impaired users with these accessibility features
 - **No text input required** — entire UI is voice-driven
 - **Haptic feedback** on emergency button
 - **PWA installable** — works like a native app
+
+---
+
+## Advanced Features
+
+### Camera Controls
+- **Camera Flip** — switch between front and rear cameras by voice or button
+- **Flashlight Toggle** — turn on torch for low-light reading (supported devices)
+- **Camera Preview** — floating picture-in-picture preview of camera feed
+- **Low-Power Mode** — reduce frame rate (0.5 FPS) and quality for battery savings
+
+### Real-Time UX
+- **Audio Visualizer** — animated orb showing listening/speaking/processing states
+- **Conversation History** — scrollable transcript with role-based message bubbles
+- **Quick Action Chips** — 16 context-aware tappable prompts (4 per mode)
+- **Toast Notifications** — floating alerts for mode changes, errors, usage warnings
+- **Swipe Gestures** — swipe left/right to cycle through modes
+- **Audio Cues** — spatial sound chimes for connect, disconnect, mode change, error
+
+### Session Tools
+- **Bookmark Descriptions** — star important AI descriptions for later reference
+- **Export Transcript** — download conversation as text file
+- **Session Summary** — automatic summary on session end (duration, descriptions, bookmarks)
+
+### Resilience
+- **Auto-Reconnect** — exponential backoff with jitter (up to 10 attempts)
+- **Offline Detection** — banner and TTS warning when network drops
+- **Connection Quality** — real-time latency indicator with signal bars
+- **Onboarding Tutorial** — 5-step guided walkthrough with voice narration for first-time users
 
 ---
 

@@ -16,6 +16,27 @@ const nextConfig: NextConfig = {
           { key: "Cache-Control", value: "no-cache" },
         ],
       },
+      {
+        source: "/(.*)",
+        headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Permissions-Policy", value: "camera=(self), microphone=(self), geolocation=()" },
+          {
+            key: "Content-Security-Policy",
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com",
+              "style-src 'self' 'unsafe-inline'",
+              "connect-src 'self' wss: https: ws:",
+              "img-src 'self' data: blob: https://lh3.googleusercontent.com",
+              "frame-src https://challenges.cloudflare.com",
+              "frame-ancestors 'none'",
+            ].join("; "),
+          },
+        ],
+      },
     ];
   },
 };

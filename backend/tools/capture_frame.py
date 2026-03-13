@@ -17,8 +17,8 @@ def capture_frame(tool_context: ToolContext) -> dict:
             "message": "No frame available. The camera may not be active.",
         }
 
-    session_id: str = tool_context.state["session_id"]
+    uid: str = tool_context.state.get("user_id", tool_context.state["session_id"])
     frame_bytes = base64.b64decode(latest_frame_b64)
-    url = storage_service.upload_frame(session_id, frame_bytes)
+    url = storage_service.upload_frame(uid, frame_bytes)
 
     return {"status": "captured", "url": url}
