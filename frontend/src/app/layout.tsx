@@ -1,11 +1,12 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import { Atkinson_Hyperlegible_Next, Instrument_Serif } from "next/font/google";
+import { Atkinson_Hyperlegible, Instrument_Serif } from "next/font/google";
 import { cn } from "@/lib/utils";
 import { ToastProvider } from "@/components/ToastProvider";
 
-const atkinson = Atkinson_Hyperlegible_Next({
+const atkinson = Atkinson_Hyperlegible({
   subsets: ["latin"],
+  weight: ["400", "700"],
   variable: "--font-sans",
   display: "swap",
 });
