@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { usePageAnimations } from "@/hooks/usePageAnimations";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuthContext } from "@/lib/auth/auth-provider";
 import { API_URL } from "@/lib/constants";
 import Image from "next/image";
 import Link from "next/link";
@@ -32,7 +32,8 @@ function formatTime(seconds: number): string {
 
 export default function DashboardPage() {
   const pageRef = usePageAnimations();
-  const { user, uid, getToken } = useAuth();
+  const { user, getToken } = useAuthContext();
+  const uid = user?.id;
   const [usage, setUsage] = useState<UsageData | null>(null);
   const [error, setError] = useState("");
   const [fetching, setFetching] = useState(false);
@@ -143,11 +144,11 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="flex flex-col gap-3">
-              {user?.photoURL && (
+              {user?.avatar && (
                 <div className="flex items-center gap-3">
-                  <Image src={user.photoURL} alt="" width={40} height={40} className="rounded-full ring-2 ring-border" />
+                  <Image src={user.avatar} alt="" width={40} height={40} className="rounded-full ring-2 ring-border" />
                   <div>
-                    <p className="text-sm font-medium text-card-foreground">{user.displayName}</p>
+                    <p className="text-sm font-medium text-card-foreground">{user.name}</p>
                     <p className="text-xs text-muted-foreground">{user.email}</p>
                   </div>
                 </div>
@@ -156,7 +157,7 @@ export default function DashboardPage() {
                 <span className="text-muted-foreground">User ID</span>
                 <span className="text-card-foreground font-mono text-xs">{uid?.slice(0, 12)}...</span>
                 <span className="text-muted-foreground">Status</span>
-                <span className="text-card-foreground">{user?.email ? "Signed in" : "Guest"}</span>
+                <span className="text-card-foreground">{user ? "Signed in" : "Guest"}</span>
                 <span className="text-muted-foreground">Tier</span>
                 <span className="inline-flex w-fit items-center rounded-full border border-border bg-muted/50 px-2.5 py-0.5 text-xs font-medium capitalize">{usage?.tier || "free"}</span>
               </div>

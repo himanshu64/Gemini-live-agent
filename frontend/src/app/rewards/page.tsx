@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { usePageAnimations } from "@/hooks/usePageAnimations";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuthContext } from "@/lib/auth/auth-provider";
 import { API_URL } from "@/lib/constants";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -75,7 +75,8 @@ const BADGE_ICONS: Record<string, string> = {
 
 export default function RewardsPage() {
   const pageRef = usePageAnimations();
-  const { uid, getToken } = useAuth();
+  const { user, getToken } = useAuthContext();
+  const uid = user?.id;
   const [tab, setTab] = useState<Tab>("profile");
   const [profile, setProfile] = useState<Profile | null>(null);
   const [allBadges, setAllBadges] = useState<Record<string, BadgeInfo>>({});

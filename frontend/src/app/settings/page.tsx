@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { usePageAnimations } from "@/hooks/usePageAnimations";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuthContext } from "@/lib/auth/auth-provider";
 import { API_URL } from "@/lib/constants";
 import { speak } from "@/lib/speak";
 import { speechConfig } from "@/lib/speak";
@@ -38,7 +38,8 @@ interface Preferences {
 
 export default function SettingsPage() {
   const pageRef = usePageAnimations();
-  const { uid, getToken } = useAuth();
+  const { user, getToken } = useAuthContext();
+  const uid = user?.id;
   const [prefs, setPrefs] = useState<Preferences>({});
   const [saving, setSaving] = useState(false);
 

@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuthContext } from "@/lib/auth/auth-provider";
 import { useWebSocket, type WSMessage } from "@/hooks/useWebSocket";
 import { useCamera } from "@/hooks/useCamera";
 import { useScreenShare } from "@/hooks/useScreenShare";
@@ -55,7 +55,8 @@ export default function Home() {
   const isOnline = useOnlineStatus();
   const { containerRef: turnstileRef, verify: verifyCaptcha } = useTurnstile();
 
-  const { uid, loading: authLoading, getToken } = useAuth();
+  const { user, loading: authLoading, getToken, logout } = useAuthContext();
+  const uid = user?.id;
 
   // Keep refs in sync with state
   useEffect(() => { audioMutedRef.current = audioMuted; }, [audioMuted]);
@@ -544,6 +545,12 @@ export default function Home() {
             <Button variant="ghost" size="sm" className="rounded-full text-xs px-2.5" render={<Link href="/legal" aria-label="Legal information" />}>
               Legal
             </Button>
+            <button
+              onClick={() => logout()}
+              className="rounded-full px-2.5 py-1.5 text-xs text-red-400 hover:bg-red-500/10 transition-colors"
+            >
+              Logout
+            </button>
           </nav>
 
           {/* Mobile menu button */}
@@ -578,6 +585,12 @@ export default function Home() {
                     {item.label}
                   </Link>
                 ))}
+                <button
+                  onClick={() => { setMenuOpen(false); logout(); }}
+                  className="rounded-xl px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition-colors text-left"
+                >
+                  Logout
+                </button>
               </nav>
             )}
           </div>

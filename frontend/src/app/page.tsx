@@ -73,20 +73,25 @@ export default function LandingPage() {
           <Link href="/" className="text-xl font-bold text-primary tracking-tight">
             SightLine
           </Link>
-          <nav className="flex items-center gap-1 sm:gap-2">
+          <nav className="flex items-center gap-1.5 sm:gap-2">
             <Link href="/guide" className="hidden sm:inline-flex rounded-lg px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
               Guide
             </Link>
             <Link href="/feedback" className="hidden sm:inline-flex rounded-lg px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
               Feedback
             </Link>
+            {user && (
+              <Link href="/dashboard" className="hidden sm:inline-flex rounded-lg px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+                Dashboard
+              </Link>
+            )}
             <ThemeToggle />
             <AuthButton />
             <Link
               href={appHref}
-              className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+              className="rounded-lg bg-primary px-3 sm:px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
             >
-              Launch App
+              {user ? "Open App" : "Get Started"}
             </Link>
           </nav>
         </div>
