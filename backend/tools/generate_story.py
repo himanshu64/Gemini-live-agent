@@ -27,7 +27,7 @@ def generate_story(
     uid: str = tool_context.state.get("user_id", tool_context.state.get("session_id", "unknown"))
 
     system_prompt = (
-        f"You are a creative storyteller. Create a short illustrated story in a {style or 'children\\'s book'} style. "
+        f"You are a creative storyteller. Create a short illustrated story in a {style or 'childrens book'} style. "
         "Include vivid descriptions and generate images to accompany each scene. "
         "Keep the story to 3-5 segments, each with a paragraph of text and an illustration."
     )
