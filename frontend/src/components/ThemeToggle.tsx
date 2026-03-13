@@ -4,13 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 type Theme = "light" | "dark" | "system";
 
 function getSystemTheme(): "light" | "dark" {
-  if (typeof window === "undefined") return "dark";
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-}
-
-function getStoredTheme(): Theme {
-  if (typeof window === "undefined") return "system";
-  return (localStorage.getItem("theme") as Theme) || "system";
 }
 
 function applyTheme(theme: Theme) {
@@ -19,7 +13,15 @@ function applyTheme(theme: Theme) {
 }
 
 export default function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>(getStoredTheme);
+  // Always start with "system" to match server render, then sync from localStorage
+  const [theme, setTheme] = useState<Theme>("system");
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    const stored = (localStorage.getItem("theme") as Theme) || "system";
+    setTheme(stored);
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     applyTheme(theme);
@@ -44,6 +46,20 @@ export default function ThemeToggle() {
 
   const label = theme === "light" ? "Light" : theme === "dark" ? "Dark" : "System";
   const icon = theme === "light" ? "☀️" : theme === "dark" ? "🌙" : "💻";
+
+  if (!mounted) {
+    // Render placeholder matching server output to avoid hydration mismatch
+    return (
+      <button
+        className="rounded-full px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5"
+        aria-label="Theme: System. Click to change."
+        title="Theme: System"
+      >
+        <span aria-hidden="true">💻</span>
+        <span className="hidden sm:inline">System</span>
+      </button>
+    );
+  }
 
   return (
     <button
