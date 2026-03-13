@@ -4,6 +4,7 @@ import Link from "next/link";
 import { speak, stopSpeaking } from "@/lib/speak";
 import ThemeToggle from "@/components/ThemeToggle";
 import AuthButton from "@/components/AuthButton";
+import { useAuthContext } from "@/lib/auth/auth-provider";
 
 const FEATURES = [
   {
@@ -54,6 +55,9 @@ const HOW_IT_WORKS = [
 const TECH_STACK = ["Gemini 2.5 Flash", "Vertex AI", "Google ADK", "Cloud Run", "Firestore", "Cloud Storage", "Firebase Auth"];
 
 export default function LandingPage() {
+  const { user } = useAuthContext();
+  const appHref = user ? "/live" : "/login";
+
   const readAloud = useCallback((title: string, description: string) => {
     stopSpeaking();
     speak(`${title}. ${description}`);
@@ -77,7 +81,7 @@ export default function LandingPage() {
             <ThemeToggle />
             <AuthButton />
             <Link
-              href="/live"
+              href={appHref}
               className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
             >
               Launch App
@@ -108,7 +112,7 @@ export default function LandingPage() {
 
         <div className="flex flex-col sm:flex-row gap-3 mt-2">
           <Link
-            href="/live"
+            href={appHref}
             className="rounded-lg bg-primary px-8 py-3.5 text-base font-semibold text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm"
           >
             Get Started — It&apos;s Free
@@ -231,7 +235,7 @@ export default function LandingPage() {
           </p>
           <div className="flex flex-col sm:flex-row gap-3">
             <Link
-              href="/live"
+              href={appHref}
               className="rounded-lg bg-primary px-8 py-3.5 text-base font-semibold text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm"
             >
               Launch App
