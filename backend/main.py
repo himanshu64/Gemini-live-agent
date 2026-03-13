@@ -401,6 +401,61 @@ async def gamification_claim_reward(request: Request, authorization: str = Heade
     return result
 
 
+# ---------------------------------------------------------------------------
+# Feedback endpoints
+# ---------------------------------------------------------------------------
+
+@app.post("/api/feedback")
+async def submit_feedback(request: Request) -> dict:
+    """Submit anonymous feedback from the landing page."""
+    body = await request.json()
+    message = (body.get("message") or "").strip()
+    if not message:
+        raise HTTPException(status_code=400, detail="Message is required")
+    if len(message) > 2000:
+        raise HTTPException(status_code=400, detail="Message too long (max 2000 chars)")
+
+    name = (body.get("name") or "Anonymous").strip()[:100]
+    email = (body.get("email") or "").strip()[:200]
+
+    from services.firestore_service import get_client as _get_fs_client
+    fs = _get_fs_client()
+    doc_ref = fs.collection("feedback").document()
+    await doc_ref.set({
+        "name": name,
+        "email": email or None,
+        "message": message,
+        "created_at": time.time(),
+    })
+
+    return {"status": "ok", "id": doc_ref.id}
+
+
+@app.get("/api/admin/feedback")
+async def admin_feedback(authorization: str = Header(""), limit: int = Query(50)) -> dict:
+    """List feedback submissions (admin only)."""
+    await _require_admin(authorization)
+
+    from services.firestore_service import get_client as _get_fs_client
+    fs = _get_fs_client()
+    feedback_list = []
+    query = fs.collection("feedback").order_by("created_at", direction="DESCENDING").limit(min(limit, 100))
+    try:
+        async for doc in query.stream():
+            data = doc.to_dict() or {}
+            feedback_list.append({
+                "id": doc.id,
+                "name": data.get("name", "Anonymous"),
+                "email": data.get("email"),
+                "message": data.get("message", ""),
+                "created_at": data.get("created_at"),
+            })
+    except Exception:
+        logger.exception("Failed to fetch feedback")
+
+    return {"feedback": feedback_list}
+
+
 async def _handle_keepalive(ws: WebSocket, session_id: str) -> None:
     """Send periodic pings to prevent Cloud Run from killing idle connections."""
     try:

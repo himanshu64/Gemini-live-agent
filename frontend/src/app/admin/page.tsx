@@ -90,7 +90,15 @@ interface ServerStats {
   turnstile_enabled: boolean;
 }
 
-type Tab = "overview" | "users" | "analytics" | "sessions" | "crashlytics" | "security";
+type Tab = "overview" | "users" | "analytics" | "sessions" | "crashlytics" | "security" | "feedback";
+
+interface FeedbackRow {
+  id: string;
+  name: string;
+  email: string | null;
+  message: string;
+  created_at: number | null;
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -194,6 +202,7 @@ export default function AdminDashboard() {
   const [retention, setRetention] = useState<RetentionDay[]>([]);
   const [totalUnique, setTotalUnique] = useState(0);
   const [serverStats, setServerStats] = useState<ServerStats | null>(null);
+  const [feedback, setFeedback] = useState<FeedbackRow[]>([]);
   const [togglingUser, setTogglingUser] = useState<string | null>(null);
   const [loadingData, setLoadingData] = useState(false);
   const [error, setError] = useState("");
@@ -272,6 +281,11 @@ export default function AdminDashboard() {
         if (data) setServerStats(data);
         break;
       }
+      case "feedback": {
+        const data = await adminFetch<{ feedback: FeedbackRow[] }>("/api/admin/feedback");
+        if (data) setFeedback(data.feedback);
+        break;
+      }
     }
     setLoadingData(false);
   }, [uid, tab, adminFetch]);
@@ -327,6 +341,7 @@ export default function AdminDashboard() {
     { key: "sessions", label: "Sessions" },
     { key: "crashlytics", label: "Crashlytics" },
     { key: "security", label: "Security" },
+    { key: "feedback", label: "Feedback" },
   ];
 
   const maxTrendMinutes = Math.max(...(trends.length ? trends.map((t) => t.total_minutes) : [1]), 1);
@@ -1004,6 +1019,42 @@ export default function AdminDashboard() {
                   </CardContent>
                 </Card>
               </>
+            )}
+
+            {/* ===================== FEEDBACK TAB ===================== */}
+            {tab === "feedback" && (
+              <Card className="bg-card/50 backdrop-blur-sm">
+                <CardHeader className="flex-row items-center justify-between">
+                  <CardTitle className="font-serif italic text-lg">User Feedback ({feedback.length})</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {feedback.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No feedback submitted yet.</p>
+                  ) : (
+                    <div className="flex flex-col gap-3 max-h-[70vh] overflow-y-auto -mx-1 px-1">
+                      {feedback.map((f) => (
+                        <div
+                          key={f.id}
+                          className="rounded-xl border border-border bg-muted/30 p-4"
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-foreground">{f.name}</span>
+                              {f.email && (
+                                <span className="text-[11px] text-muted-foreground">{f.email}</span>
+                              )}
+                            </div>
+                            <span className="text-[11px] text-muted-foreground shrink-0">
+                              {f.created_at ? relativeTime(new Date(f.created_at * 1000).toISOString()) : ""}
+                            </span>
+                          </div>
+                          <p className="text-sm text-foreground/80 whitespace-pre-wrap leading-relaxed">{f.message}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             )}
           </>
         )}

@@ -1,697 +1,348 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useAuth } from "@/hooks/useAuth";
-import { useWebSocket, type WSMessage } from "@/hooks/useWebSocket";
-import { useCamera } from "@/hooks/useCamera";
-import { useMicrophone } from "@/hooks/useMicrophone";
-import { useAudioPlayback } from "@/hooks/useAudioPlayback";
-import { useSwipeGesture } from "@/hooks/useSwipeGesture";
-import { useOnlineStatus } from "@/hooks/useOnlineStatus";
-import { useTurnstile } from "@/hooks/useTurnstile";
-import { speak, stopSpeaking } from "@/lib/speak";
-import { vibrate } from "@/lib/haptics";
-import { soundConnected, soundDisconnected, soundModeChange, soundError, soundReconnecting, soundNotification } from "@/lib/sounds";
-import { exportAsText } from "@/lib/exportTranscript";
-import { MODES, type Mode } from "@/lib/constants";
-import StatusIndicator from "@/components/StatusIndicator";
-import ModeSelector from "@/components/ModeSelector";
-import EmergencyButton from "@/components/EmergencyButton";
-import AudioVisualizer from "@/components/AudioVisualizer";
-import ConversationLog, { type ConversationEntry } from "@/components/ConversationLog";
-import QuickActions from "@/components/QuickActions";
-import OnboardingModal from "@/components/OnboardingModal";
-import CameraPreview from "@/components/CameraPreview";
-import CameraControls from "@/components/CameraControls";
-import ConnectionQuality from "@/components/ConnectionQuality";
-import { useToast } from "@/components/ToastProvider";
+import { useCallback, useRef, useState } from "react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { API_URL } from "@/lib/constants";
 
-let entryCounter = 0;
-function makeEntry(role: ConversationEntry["role"], text: string): ConversationEntry {
-  return { id: `${++entryCounter}`, role, text, timestamp: Date.now() };
-}
+const FEATURES = [
+  {
+    title: "Navigation Mode",
+    description: "Warns about obstacles, stairs, curbs, and crosswalks. Uses clock-face directions to guide you safely.",
+    icon: "🧭",
+  },
+  {
+    title: "Reading Mode",
+    description: "Reads text aloud from signs, menus, medicine bottles, and documents. Just point your camera.",
+    icon: "📖",
+  },
+  {
+    title: "Shopping Mode",
+    description: "Identifies products, reads prices and nutrition labels. Compare items side by side while shopping.",
+    icon: "🛒",
+  },
+  {
+    title: "Social Mode",
+    description: "Describes people's expressions, gestures, and appearance to help you engage in social settings.",
+    icon: "👥",
+  },
+];
 
-export default function Home() {
-  const [currentMode, setCurrentMode] = useState<Mode>("navigation");
-  const [conversation, setConversation] = useState<ConversationEntry[]>([]);
+const HOW_IT_WORKS = [
+  { step: "1", title: "Open SightLine", description: "Sign in and tap Start to connect to the AI assistant." },
+  { step: "2", title: "Point Your Camera", description: "Hold your phone — the AI sees what your camera sees in real time." },
+  { step: "3", title: "Listen & Speak", description: "SightLine describes your surroundings. Ask questions naturally by voice." },
+  { step: "4", title: "Switch Modes", description: "Say 'switch to reading mode' or swipe to change between 4 specialized modes." },
+];
+
+export default function LandingPage() {
+  const [feedbackText, setFeedbackText] = useState("");
+  const [feedbackName, setFeedbackName] = useState("");
+  const [feedbackEmail, setFeedbackEmail] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState("");
   const [isListening, setIsListening] = useState(false);
-  const [startError, setStartError] = useState("");
-  const [showPreview, setShowPreview] = useState(true);
-  const [lowPowerMode, setLowPowerMode] = useState(false);
-  const [videoDisabled, setVideoDisabled] = useState(false);
-  const [audioMuted, setAudioMuted] = useState(false);
-  const [sosActive, setSosActive] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const isSpeakingRef = useRef(false);
-  const [activeStream, setActiveStream] = useState<MediaStream | null>(null);
-  const hasAnnouncedRef = useRef(false);
-  const audioMutedRef = useRef(false);
-  const videoDisabledRef = useRef(false);
-  const { addToast } = useToast();
-  const isOnline = useOnlineStatus();
-  const { containerRef: turnstileRef, verify: verifyCaptcha } = useTurnstile();
+  const recognitionRef = useRef<ReturnType<typeof createRecognition> | null>(null);
 
-  const { uid, isAnonymous, loading: authLoading, getToken, signInWithGoogle } = useAuth();
+  const handleSubmitFeedback = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!feedbackText.trim()) return;
 
-  // Keep refs in sync with state
-  useEffect(() => { audioMutedRef.current = audioMuted; }, [audioMuted]);
-  useEffect(() => { videoDisabledRef.current = videoDisabled; }, [videoDisabled]);
-
-  // Welcome announcement (only once)
-  useEffect(() => {
-    if (hasAnnouncedRef.current || authLoading || !uid) return;
-    hasAnnouncedRef.current = true;
-    const t = setTimeout(() => {
-      speak(
-        "SightLine ready. Tap Start to begin, or swipe left and right to change modes. Keyboard shortcuts: Escape to stop, M to switch mode, E for emergency."
-      );
-    }, 800);
-    return () => clearTimeout(t);
-  }, [authLoading, uid]);
-
-  const { isPlaying, play: playAudio, stopAll: stopAudioPlayback } = useAudioPlayback();
-
-  // --- Message handler ---
-  const handleMessage = useCallback(
-    (msg: WSMessage) => {
-      switch (msg.type) {
-        case "audio":
-          if (audioMutedRef.current) return;
-          stopSpeaking();
-          isSpeakingRef.current = true;
-          playAudio(msg.data);
-          break;
-        case "transcript":
-          setConversation((prev) => {
-            const last = prev[prev.length - 1];
-            if (last && last.role === "assistant") {
-              return [...prev.slice(0, -1), { ...last, text: msg.text }];
-            }
-            return [...prev, makeEntry("assistant", msg.text)];
-          });
-          break;
-        case "interrupted":
-          stopAudioPlayback();
-          isSpeakingRef.current = false;
-          break;
-        case "status":
-          if (msg.status === "listening") setIsListening(true);
-          else if (msg.status === "processing") setIsListening(false);
-          break;
-        case "mode":
-          addToast(`Mode: ${msg.mode}`, "success");
-          break;
-        case "sos_active":
-          setSosActive(true);
-          addToast("Emergency mode active", "error");
-          break;
-        case "usage_warning": {
-          const warnMsg = `${msg.minutes_remaining} minutes remaining today`;
-          speak(warnMsg);
-          addToast(warnMsg, "warning");
-          setConversation((prev) => [...prev, makeEntry("system", warnMsg)]);
-          break;
-        }
-        case "error":
-          console.error("[Agent Error]", msg.message);
-          soundError();
-          addToast(`Error: ${msg.message}`, "error");
-          setConversation((prev) => [...prev, makeEntry("system", `Error: ${msg.message}`)]);
-          speak(`Error: ${msg.message}`);
-          break;
-      }
-    },
-    [playAudio, stopAudioPlayback, addToast]
-  );
-
-  const handleReconnecting = useCallback(
-    (attempt: number) => {
-      soundReconnecting();
-      addToast(`Reconnecting... (attempt ${attempt})`, "warning");
-    },
-    [addToast]
-  );
-
-  const handleReconnected = useCallback(() => {
-    soundConnected();
-    vibrate("connected");
-    addToast("Reconnected!", "success");
-    speak("Reconnected.");
-  }, [addToast]);
-
-  const { connectionState, connect, disconnect, send, setTokenProvider, setCaptchaNonce, latency } = useWebSocket({
-    onMessage: handleMessage,
-    onReconnecting: handleReconnecting,
-    onReconnected: handleReconnected,
-    autoReconnect: true,
-  });
-
-  useEffect(() => {
-    if (uid) setTokenProvider(getToken);
-  }, [uid, getToken, setTokenProvider]);
-
-  // --- Offline detection ---
-  useEffect(() => {
-    if (!isOnline) {
-      addToast("You're offline", "warning");
-      speak("You are offline. Reconnecting when network returns.");
-    } else if (connectionState === "disconnected") {
-      addToast("Back online", "success");
-    }
-  }, [isOnline]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // --- Audio/Video handlers ---
-  const handleAudioChunk = useCallback(
-    (base64: string) => {
-      if (!isPlaying && !audioMutedRef.current) send({ type: "audio", data: base64 });
-    },
-    [send, isPlaying]
-  );
-
-  const handleVideoFrame = useCallback(
-    (base64: string) => {
-      if (!videoDisabledRef.current) send({ type: "video", data: base64 });
-    },
-    [send]
-  );
-
-  const {
-    videoRef, streamRef, isActive: cameraActive, start: startCamera, stop: stopCamera,
-    flip: flipCamera, facing: cameraFacing, torchSupported, torchOn, toggleTorch,
-  } = useCamera(handleVideoFrame, { lowPower: lowPowerMode });
-  const { isActive: micActive, start: startMic, stop: stopMic } = useMicrophone(handleAudioChunk);
-
-  // Sync streamRef into state so we can safely pass it during render
-  useEffect(() => {
-    setActiveStream(streamRef.current);
-  }, [cameraActive, streamRef]);
-
-  // --- Quick action: send text as user speech ---
-  const handleQuickAction = useCallback(
-    (text: string) => {
-      if (connectionState !== "connected") return;
-      setConversation((prev) => [...prev, makeEntry("user", text)]);
-      speak(text);
-    },
-    [connectionState]
-  );
-
-  // --- Start / Stop ---
-  const handleStart = useCallback(async () => {
-    setStartError("");
-    stopSpeaking();
-    speak("Requesting camera and microphone access.");
-
+    setSubmitting(true);
+    setError("");
     try {
-      const camStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
-        audio: true,
+      const res = await fetch(`${API_URL}/api/feedback`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: feedbackName.trim() || "Anonymous",
+          email: feedbackEmail.trim() || null,
+          message: feedbackText.trim(),
+        }),
       });
-      camStream.getTracks().forEach((t) => t.stop());
-    } catch (err) {
-      const msg =
-        err instanceof DOMException && err.name === "NotAllowedError"
-          ? "Camera and microphone permission denied. Please allow in browser settings and try again."
-          : err instanceof DOMException && err.name === "AbortError"
-          ? "Camera timed out. Close other apps using the camera and try again."
-          : `Permission error: ${err instanceof Error ? err.message : err}`;
-      setStartError(msg);
-      speak(msg);
-      soundError();
-      addToast("Permission denied", "error");
-      return;
-    }
-
-    speak("Permissions granted. Connecting.");
-
-    try {
-      const captchaNonce = await verifyCaptcha();
-      setCaptchaNonce(captchaNonce);
+      if (!res.ok) throw new Error("Failed to submit");
+      setSubmitted(true);
+      setFeedbackText("");
+      setFeedbackName("");
+      setFeedbackEmail("");
     } catch {
-      setStartError("Captcha verification failed. Please try again.");
-      soundError();
+      setError("Failed to submit feedback. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  }, [feedbackText, feedbackName, feedbackEmail]);
+
+  // Voice input for feedback
+  const toggleVoiceInput = useCallback(() => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
       return;
     }
 
-    try {
-      await connect();
-      soundConnected();
-      vibrate("connected");
-      addToast("Connected to SightLine", "success");
-      speak("Connected. Starting camera and microphone.");
-      await startCamera();
-      await startMic();
-      setIsListening(true);
-      setConversation([makeEntry("system", `Session started — ${currentMode} mode`)]);
-      speak("Camera is active. SightLine is analyzing what your camera sees.");
-    } catch (err) {
-      const msg = `Failed to connect: ${err instanceof Error ? err.message : err}`;
-      setStartError(msg);
-      speak(msg);
-      soundError();
-      addToast("Connection failed", "error");
-    }
-  }, [connect, startCamera, startMic, addToast, currentMode, verifyCaptcha, setCaptchaNonce]);
-
-  const handleStop = useCallback(() => {
-    soundDisconnected();
-    vibrate("disconnected");
-    stopMic();
-    stopCamera();
-    disconnect();
-    stopAudioPlayback();
-    stopSpeaking();
-    setIsListening(false);
-    setStartError("");
-    setSosActive(false);
-    setVideoDisabled(false);
-    setAudioMuted(false);
-
-    const assistantMsgs = conversation.filter((e) => e.role === "assistant").length;
-    const bookmarked = conversation.filter((e) => e.bookmarked).length;
-    const startEntry = conversation.find((e) => e.role === "system" && e.text.includes("Session started"));
-    const duration = startEntry ? Math.round((Date.now() - startEntry.timestamp) / 60000) : 0;
-    const summary = `Session ended: ${assistantMsgs} descriptions, ${duration} min${bookmarked > 0 ? `, ${bookmarked} bookmarked` : ""}`;
-    setConversation((prev) => [...prev, makeEntry("system", summary)]);
-
-    addToast("Session ended", "info");
-    speak(summary);
-  }, [stopMic, stopCamera, disconnect, stopAudioPlayback, addToast, conversation]);
-
-  // --- Bookmark & Export ---
-  const handleBookmark = useCallback((id: string) => {
-    setConversation((prev) =>
-      prev.map((e) => (e.id === id ? { ...e, bookmarked: !e.bookmarked } : e))
-    );
-    soundNotification();
-    addToast("Bookmark toggled", "info");
-  }, [addToast]);
-
-  const handleExport = useCallback(() => {
-    exportAsText(conversation);
-    addToast("Conversation exported", "success");
-  }, [conversation, addToast]);
-
-  // --- Camera control handlers ---
-  const handleFlipCamera = useCallback(() => {
-    flipCamera();
-    addToast(`Camera: ${cameraFacing === "user" ? "rear" : "front"}`, "info");
-    speak(cameraFacing === "user" ? "Switched to rear camera" : "Switched to front camera");
-  }, [flipCamera, cameraFacing, addToast]);
-
-  const handleToggleTorch = useCallback(() => {
-    toggleTorch();
-    addToast(torchOn ? "Flashlight off" : "Flashlight on", "info");
-    speak(torchOn ? "Flashlight off" : "Flashlight on");
-  }, [toggleTorch, torchOn, addToast]);
-
-  const handleToggleLowPower = useCallback(() => {
-    setLowPowerMode((prev) => !prev);
-    addToast(lowPowerMode ? "Normal power mode" : "Low power mode", "info");
-    speak(lowPowerMode ? "Normal power mode" : "Low power mode enabled");
-  }, [lowPowerMode, addToast]);
-
-  // --- Video disable toggle ---
-  const handleToggleVideo = useCallback(() => {
-    if (videoDisabled) {
-      setVideoDisabled(false);
-      startCamera();
-      speak("Video re-enabled.");
-      addToast("Video enabled", "info");
-    } else {
-      setVideoDisabled(true);
-      stopCamera();
-      speak("Video disabled. SightLine is audio-only.");
-      addToast("Video disabled", "warning");
-    }
-  }, [videoDisabled, startCamera, stopCamera, addToast]);
-
-  // --- Audio mute toggle ---
-  const handleToggleMute = useCallback(() => {
-    if (audioMuted) {
-      setAudioMuted(false);
-      speak("Audio unmuted.");
-      addToast("Audio unmuted", "info");
-    } else {
-      speak("Audio muted.");
-      stopAudioPlayback();
-      setAudioMuted(true);
-      addToast("Audio muted", "warning");
-    }
-  }, [audioMuted, stopAudioPlayback, addToast]);
-
-  // --- Mode switching ---
-  const handleModeChange = useCallback(
-    (mode: Mode) => {
-      setCurrentMode(mode);
-      send({ type: "mode", mode });
-      soundModeChange();
-      speak(`Switched to ${mode} mode.`);
-      addToast(`${mode.charAt(0).toUpperCase() + mode.slice(1)} mode`, "info");
-    },
-    [send, addToast]
-  );
-
-  // --- Swipe gesture for mode cycling ---
-  const swipeRef = useSwipeGesture<HTMLDivElement>({
-    onSwipeLeft: () => {
-      const idx = MODES.indexOf(currentMode);
-      const next = MODES[(idx + 1) % MODES.length];
-      handleModeChange(next);
-    },
-    onSwipeRight: () => {
-      const idx = MODES.indexOf(currentMode);
-      const prev = MODES[(idx - 1 + MODES.length) % MODES.length];
-      handleModeChange(prev);
-    },
-  });
-
-  // --- Emergency SOS handler ---
-  const handleEmergency = useCallback(() => {
-    speak("Emergency SOS activated. Describing surroundings with high priority.");
-    soundError();
-    vibrate("emergency");
-    setSosActive(true);
-    setConversation((prev) => [...prev, makeEntry("system", "Emergency SOS activated")]);
-
-    if ("geolocation" in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          send({
-            type: "emergency",
-            location: { lat: pos.coords.latitude, lng: pos.coords.longitude },
-            timestamp: Date.now(),
-          });
-        },
-        () => {
-          send({ type: "emergency", timestamp: Date.now() });
-        },
-        { timeout: 3000, enableHighAccuracy: false }
-      );
-    } else {
-      send({ type: "emergency", timestamp: Date.now() });
+    const recognition = createRecognition();
+    if (!recognition) {
+      setError("Voice input not supported in this browser.");
+      return;
     }
 
-    addToast("Emergency SOS activated", "error");
-  }, [send, addToast]);
-
-  const handleCancelSos = useCallback(() => {
-    setSosActive(false);
-    send({ type: "mode", mode: currentMode });
-    speak("Emergency cancelled. Returning to normal mode.");
-    addToast("SOS cancelled", "info");
-    setConversation((prev) => [...prev, makeEntry("system", "SOS cancelled")]);
-  }, [send, currentMode, addToast]);
-
-  // --- Keyboard shortcuts ---
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-
-      if (e.key === "Escape" && isRunning) {
-        e.preventDefault();
-        handleStop();
-      } else if (e.key === "m" && !e.ctrlKey && !e.metaKey && isRunning) {
-        e.preventDefault();
-        const idx = MODES.indexOf(currentMode);
-        const next = MODES[(idx + 1) % MODES.length];
-        handleModeChange(next);
-      } else if (e.key === "e" && !e.ctrlKey && !e.metaKey && isRunning) {
-        e.preventDefault();
-        handleEmergency();
-      } else if (e.key === "f" && !e.ctrlKey && !e.metaKey && isRunning) {
-        e.preventDefault();
-        handleFlipCamera();
-      } else if (e.key === "v" && !e.ctrlKey && !e.metaKey && isRunning) {
-        e.preventDefault();
-        handleToggleVideo();
-      } else if (e.key === "m" && e.ctrlKey && isRunning) {
-        e.preventDefault();
-        handleToggleMute();
+    recognitionRef.current = recognition;
+    recognition.onresult = (event: { results: SpeechRecognitionResultList }) => {
+      let transcript = "";
+      for (let i = 0; i < event.results.length; i++) {
+        transcript += event.results[i][0].transcript;
       }
+      setFeedbackText((prev) => (prev ? prev + " " + transcript : transcript));
     };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }); // intentionally no deps — uses latest closure values via isRunning
-
-  const isRunning = connectionState === "connected" && cameraActive && micActive;
-  const isReconnecting = connectionState === "reconnecting";
-
-  // --- Visualizer state ---
-  const vizState = !isRunning && !isReconnecting
-    ? "disconnected" as const
-    : isPlaying
-    ? "speaking" as const
-    : isListening
-    ? "listening" as const
-    : isReconnecting
-    ? "processing" as const
-    : "idle" as const;
-
-  // --- Loading state ---
-  if (authLoading) {
-    return (
-      <main className="flex min-h-dvh items-center justify-center" aria-busy="true">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-foreground/20 border-t-foreground" />
-          <p className="text-sm text-muted-foreground">Loading SightLine...</p>
-        </div>
-      </main>
-    );
-  }
-
-  // --- Auth gate: show sign-in screen if no authenticated user ---
-  if (!uid) {
-    return (
-      <main className="flex min-h-dvh flex-col items-center justify-center gap-8 px-6 py-10 text-center">
-        <div className="flex flex-col items-center gap-3">
-          <h1 className="font-serif text-4xl sm:text-5xl italic text-foreground">SightLine</h1>
-          <p className="text-muted-foreground text-base sm:text-lg max-w-md leading-relaxed">
-            Your AI vision assistant. Sign in to get started.
-          </p>
-        </div>
-
-        <div className="flex flex-col gap-4 w-full max-w-sm">
-          <button
-            onClick={signInWithGoogle}
-            className="w-full rounded-full bg-foreground px-6 py-4 text-base font-semibold text-background transition-all duration-200 hover:opacity-90 flex items-center justify-center gap-3"
-            aria-label="Sign in with Google"
-          >
-            <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
-              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" />
-              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-            </svg>
-            Sign in with Google
-          </button>
-        </div>
-
-        <p className="text-xs text-muted-foreground/60 max-w-xs">
-          By signing in, you agree to our{" "}
-          <Link href="/legal" className="underline hover:text-muted-foreground">terms and privacy policy</Link>.
-        </p>
-      </main>
-    );
-  }
+    recognition.onend = () => setIsListening(false);
+    recognition.onerror = () => setIsListening(false);
+    recognition.start();
+    setIsListening(true);
+  }, [isListening]);
 
   return (
-    <main className="flex min-h-dvh flex-col" ref={swipeRef} aria-roledescription="AI vision assistant">
-      <a href="#main-controls" className="skip-link">Skip to controls</a>
-      <video ref={videoRef} className="sr-only-video" playsInline muted aria-hidden="true" />
-
-      <OnboardingModal onComplete={() => {}} />
-
-      {/* Header — responsive */}
-      <header className="flex items-center justify-between px-4 sm:px-5 py-3 gap-2">
-        <h1 className="font-serif text-xl sm:text-2xl italic text-foreground shrink-0">SightLine</h1>
-
-        <div className="flex items-center gap-1 sm:gap-1.5">
-          {audioMuted && (
-            <span className="text-[10px] sm:text-xs text-red-400 font-medium px-1.5 sm:px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 shrink-0" aria-label="Audio is muted">
-              🔇
-            </span>
-          )}
-
-          {/* Desktop nav */}
-          <nav className="hidden sm:flex items-center gap-1" aria-label="Main navigation">
-            <Button variant="ghost" size="sm" className="rounded-full text-xs px-2.5" render={<Link href="/guide" aria-label="User guide" />}>
-              Guide
-            </Button>
-            <Button variant="ghost" size="sm" className="rounded-full text-xs px-2.5" render={<Link href="/settings" aria-label="Settings" />}>
-              Settings
-            </Button>
-            <Button variant="ghost" size="sm" className="rounded-full text-xs px-2.5" render={<Link href="/rewards" aria-label="Rewards" />}>
-              Rewards
-            </Button>
-            <Button variant="ghost" size="sm" className="rounded-full text-xs px-2.5" render={<Link href="/dashboard" aria-label="Dashboard" />}>
-              Dashboard
-            </Button>
-            <Button variant="ghost" size="sm" className="rounded-full text-xs px-2.5" render={<Link href="/legal" aria-label="Legal information" />}>
-              Legal
-            </Button>
-          </nav>
-
-          {/* Mobile menu button */}
-          <div className="relative sm:hidden">
-            <button
-              onClick={() => setMenuOpen((p) => !p)}
-              className="flex items-center justify-center w-9 h-9 rounded-full bg-secondary/50 text-sm"
-              aria-label={menuOpen ? "Close menu" : "Open menu"}
-              aria-expanded={menuOpen}
-            >
-              {menuOpen ? "✕" : "☰"}
-            </button>
-
-            {menuOpen && (
-              <nav
-                className="absolute right-0 top-11 z-50 flex flex-col gap-1 rounded-2xl border border-border bg-card p-2 shadow-xl min-w-[140px]"
-                aria-label="Main navigation"
-              >
-                {[
-                  { href: "/guide", label: "Guide" },
-                  { href: "/settings", label: "Settings" },
-                  { href: "/rewards", label: "Rewards" },
-                  { href: "/dashboard", label: "Dashboard" },
-                  { href: "/legal", label: "Legal" },
-                ].map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={() => setMenuOpen(false)}
-                    className="rounded-xl px-4 py-2.5 text-sm text-foreground hover:bg-secondary/50 transition-colors"
-                  >
-                    {item.label}
-                  </Link>
-                ))}
-              </nav>
-            )}
-          </div>
-
-          {isAnonymous && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="rounded-full border-foreground/20 text-[11px] sm:text-xs px-2 sm:px-2.5 shrink-0"
-              onClick={signInWithGoogle}
-              aria-label="Sign in with Google"
-            >
-              Sign in
-            </Button>
-          )}
-          <ConnectionQuality latency={latency} isConnected={connectionState === "connected"} />
-          <StatusIndicator
-            connectionState={connectionState === "reconnecting" ? "connecting" : connectionState}
-            isListening={isListening}
-            isSpeaking={isPlaying}
-          />
+    <div className="flex min-h-dvh flex-col">
+      {/* Nav */}
+      <header className="flex items-center justify-between px-5 sm:px-8 py-4">
+        <h1 className="font-serif text-xl sm:text-2xl italic text-foreground">SightLine</h1>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/guide"
+            className="rounded-full px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Guide
+          </Link>
+          <Link
+            href="/legal"
+            className="rounded-full px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Legal
+          </Link>
+          <Link
+            href="/live"
+            className="rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background hover:opacity-90 transition-opacity"
+          >
+            Launch App
+          </Link>
         </div>
       </header>
 
-      {/* Main content */}
-      <div className="flex flex-1 flex-col px-4 sm:px-5 pb-4 gap-3 sm:gap-4">
-        {/* Camera Preview — prominent, inline */}
-        {isRunning && (
-          <CameraPreview
-            stream={activeStream}
-            visible={showPreview}
-            videoDisabled={videoDisabled}
-          />
-        )}
-
-        {/* Audio Visualizer */}
-        {(isRunning || isReconnecting) && (
-          <div className="flex justify-center -my-1 sm:-my-2">
-            <AudioVisualizer state={vizState} />
-          </div>
-        )}
-
-        {/* Camera Controls */}
-        {isRunning && (
-          <CameraControls
-            isActive={cameraActive}
-            facing={cameraFacing}
-            torchSupported={torchSupported}
-            torchOn={torchOn}
-            showPreview={showPreview}
-            lowPower={lowPowerMode}
-            videoDisabled={videoDisabled}
-            audioMuted={audioMuted}
-            onFlip={handleFlipCamera}
-            onToggleTorch={handleToggleTorch}
-            onTogglePreview={() => setShowPreview((p) => !p)}
-            onToggleLowPower={handleToggleLowPower}
-            onToggleVideo={handleToggleVideo}
-            onToggleMute={handleToggleMute}
-          />
-        )}
-
-        {/* Offline banner */}
-        {!isOnline && (
-          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 sm:px-4 py-2.5 sm:py-3 text-sm text-amber-300 flex items-center gap-2" role="alert">
-            <span>📡</span> You&apos;re offline. Waiting for network...
-          </div>
-        )}
-
-        {/* Error banner */}
-        {startError && (
-          <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 sm:px-4 py-2.5 sm:py-3 text-sm text-red-300" role="alert">
-            {startError}
-          </div>
-        )}
-
-        {/* Conversation Log */}
-        <ConversationLog
-          entries={conversation}
-          isRunning={isRunning || isReconnecting}
-          onBookmark={handleBookmark}
-          onExport={handleExport}
-        />
-
-        {/* Quick Actions */}
-        {isRunning && (
-          <QuickActions currentMode={currentMode} onAction={handleQuickAction} disabled={!isRunning} />
-        )}
-
-        {/* Mode Selector */}
-        <ModeSelector currentMode={currentMode} onModeChange={handleModeChange} />
-
-        {/* Swipe hint */}
-        {isRunning && (
-          <p className="text-center text-[10px] text-muted-foreground/40">
-            Swipe left/right to switch modes
+      {/* Hero */}
+      <section className="flex flex-col items-center text-center px-5 sm:px-8 py-12 sm:py-20 gap-6">
+        <div className="flex flex-col gap-3 max-w-2xl">
+          <h2 className="font-serif text-4xl sm:text-5xl md:text-6xl italic text-foreground leading-tight">
+            See the world through AI
+          </h2>
+          <p className="text-base sm:text-lg text-muted-foreground leading-relaxed max-w-lg mx-auto">
+            SightLine is a real-time AI vision assistant that describes your surroundings through voice.
+            Built for visually impaired users, powered by Google Gemini.
           </p>
-        )}
-
-        {/* Controls */}
-        <div className="flex flex-col gap-3 mt-auto" id="main-controls">
-          <button
-            onClick={isRunning ? handleStop : handleStart}
-            disabled={isReconnecting || !isOnline}
-            className={`group relative w-full overflow-hidden rounded-full py-4 sm:py-5 text-base sm:text-lg font-semibold tracking-wide transition-all duration-200 ease-in-out ${
-              isReconnecting
-                ? "bg-amber-500/20 text-amber-300 cursor-wait"
-                : !isOnline
-                ? "bg-secondary/30 text-secondary-foreground/40 cursor-not-allowed"
-                : isRunning
-                ? "bg-secondary text-secondary-foreground hover:bg-secondary/80"
-                : "bg-foreground text-background hover:opacity-90"
-            }`}
-            aria-label={isRunning ? "Stop assistant" : isReconnecting ? "Reconnecting..." : !isOnline ? "Offline" : "Start assistant"}
-          >
-            {isReconnecting ? "Reconnecting..." : !isOnline ? "Offline" : isRunning ? "Stop" : "Start"}
-          </button>
-
-          <EmergencyButton
-            onEmergency={handleEmergency}
-            sosActive={sosActive}
-            onCancelSos={handleCancelSos}
-          />
         </div>
-      </div>
-      <div ref={turnstileRef} className="hidden" aria-hidden="true" />
-    </main>
+        <div className="flex flex-col sm:flex-row gap-3 mt-2">
+          <Link
+            href="/live"
+            className="rounded-full bg-foreground px-8 py-3.5 text-base font-semibold text-background hover:opacity-90 transition-opacity"
+          >
+            Get Started
+          </Link>
+          <a
+            href="#how-it-works"
+            className="rounded-full border border-border px-8 py-3.5 text-base font-medium text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Learn More
+          </a>
+        </div>
+      </section>
+
+      {/* Screenshots / Preview */}
+      <section className="px-5 sm:px-8 py-8 sm:py-12">
+        <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {[
+            { label: "Real-time camera feed with AI descriptions", bg: "from-blue-500/20 to-blue-500/5" },
+            { label: "4 specialized modes for every situation", bg: "from-purple-500/20 to-purple-500/5" },
+            { label: "Voice-first — no screen needed", bg: "from-amber-500/20 to-amber-500/5" },
+          ].map((item, i) => (
+            <div
+              key={i}
+              className={`aspect-[9/16] sm:aspect-[3/4] rounded-2xl border border-border bg-gradient-to-b ${item.bg} flex items-end p-4`}
+            >
+              <p className="text-sm text-foreground/80 font-medium leading-snug">{item.label}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Features */}
+      <section className="px-5 sm:px-8 py-12 sm:py-16" id="features">
+        <div className="max-w-4xl mx-auto">
+          <h3 className="font-serif text-2xl sm:text-3xl italic text-foreground text-center mb-8 sm:mb-12">
+            Four modes, one assistant
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+            {FEATURES.map((f) => (
+              <div
+                key={f.title}
+                className="rounded-2xl border border-border bg-card/50 p-5 sm:p-6 flex flex-col gap-3"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl" aria-hidden="true">{f.icon}</span>
+                  <h4 className="text-lg font-semibold text-foreground">{f.title}</h4>
+                </div>
+                <p className="text-sm text-muted-foreground leading-relaxed">{f.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* How it works */}
+      <section className="px-5 sm:px-8 py-12 sm:py-16 bg-card/30" id="how-it-works">
+        <div className="max-w-3xl mx-auto">
+          <h3 className="font-serif text-2xl sm:text-3xl italic text-foreground text-center mb-8 sm:mb-12">
+            How it works
+          </h3>
+          <div className="flex flex-col gap-6">
+            {HOW_IT_WORKS.map((item) => (
+              <div key={item.step} className="flex gap-4 items-start">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-foreground text-background font-bold text-sm">
+                  {item.step}
+                </div>
+                <div>
+                  <h4 className="text-base font-semibold text-foreground">{item.title}</h4>
+                  <p className="text-sm text-muted-foreground mt-1">{item.description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Tech Stack */}
+      <section className="px-5 sm:px-8 py-12 sm:py-16">
+        <div className="max-w-3xl mx-auto text-center">
+          <h3 className="font-serif text-2xl sm:text-3xl italic text-foreground mb-6">
+            Built with Google Cloud
+          </h3>
+          <div className="flex flex-wrap justify-center gap-3">
+            {["Gemini 2.5 Flash", "Vertex AI", "Google ADK", "Cloud Run", "Firestore", "Cloud Storage", "Firebase Auth"].map((tech) => (
+              <span
+                key={tech}
+                className="rounded-full border border-border bg-muted/30 px-4 py-2 text-xs font-medium text-muted-foreground"
+              >
+                {tech}
+              </span>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Feedback Form */}
+      <section className="px-5 sm:px-8 py-12 sm:py-16 bg-card/30" id="feedback">
+        <div className="max-w-lg mx-auto">
+          <h3 className="font-serif text-2xl sm:text-3xl italic text-foreground text-center mb-2">
+            Share your feedback
+          </h3>
+          <p className="text-sm text-muted-foreground text-center mb-8">
+            Help us improve SightLine. Type or speak your feedback below.
+          </p>
+
+          {submitted ? (
+            <div className="rounded-2xl border border-green-500/30 bg-green-500/10 p-6 text-center">
+              <p className="text-green-400 font-semibold text-lg mb-1">Thank you!</p>
+              <p className="text-sm text-muted-foreground">Your feedback has been submitted.</p>
+              <button
+                onClick={() => setSubmitted(false)}
+                className="mt-4 rounded-full border border-border px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Send another
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmitFeedback} className="flex flex-col gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <input
+                  type="text"
+                  placeholder="Your name (optional)"
+                  value={feedbackName}
+                  onChange={(e) => setFeedbackName(e.target.value)}
+                  className="rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-ring"
+                  aria-label="Your name"
+                />
+                <input
+                  type="email"
+                  placeholder="Email (optional)"
+                  value={feedbackEmail}
+                  onChange={(e) => setFeedbackEmail(e.target.value)}
+                  className="rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-ring"
+                  aria-label="Your email"
+                />
+              </div>
+
+              <div className="relative">
+                <textarea
+                  placeholder="Tell us what you think — type or tap the mic to speak..."
+                  value={feedbackText}
+                  onChange={(e) => setFeedbackText(e.target.value)}
+                  rows={4}
+                  required
+                  className="w-full rounded-xl border border-border bg-background px-4 py-3 pr-14 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+                  aria-label="Your feedback message"
+                />
+                <button
+                  type="button"
+                  onClick={toggleVoiceInput}
+                  className={`absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full transition-colors ${
+                    isListening
+                      ? "bg-red-500/20 text-red-400 animate-pulse"
+                      : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                  }`}
+                  aria-label={isListening ? "Stop voice input" : "Start voice input"}
+                  title={isListening ? "Listening... tap to stop" : "Speak your feedback"}
+                >
+                  {isListening ? "⏹" : "🎤"}
+                </button>
+              </div>
+
+              {error && (
+                <p className="text-sm text-red-400">{error}</p>
+              )}
+
+              <button
+                type="submit"
+                disabled={submitting || !feedbackText.trim()}
+                className="rounded-full bg-foreground px-6 py-3.5 text-base font-semibold text-background hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {submitting ? "Sending..." : "Submit Feedback"}
+              </button>
+            </form>
+          )}
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="px-5 sm:px-8 py-6 border-t border-border">
+        <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted-foreground">
+          <p className="font-serif italic text-sm text-foreground">SightLine</p>
+          <div className="flex gap-4">
+            <Link href="/guide" className="hover:text-foreground transition-colors">Guide</Link>
+            <Link href="/legal" className="hover:text-foreground transition-colors">Legal</Link>
+            <Link href="/live" className="hover:text-foreground transition-colors">Launch App</Link>
+          </div>
+          <p>Built for the Gemini API Developer Competition</p>
+        </div>
+      </footer>
+    </div>
   );
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function createRecognition(): any {
+  if (typeof window === "undefined") return null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+  if (!SpeechRecognition) return null;
+  const recognition = new SpeechRecognition();
+  recognition.continuous = true;
+  recognition.interimResults = false;
+  recognition.lang = "en-US";
+  return recognition;
 }
