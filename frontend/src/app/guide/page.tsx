@@ -1,5 +1,6 @@
 "use client";
 import { useCallback } from "react";
+import { usePageAnimations } from "@/hooks/usePageAnimations";
 import { speak, stopSpeaking } from "@/lib/speak";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -64,6 +65,7 @@ const sections = [
 ];
 
 export default function GuidePage() {
+  const pageRef = usePageAnimations();
   const readAloud = useCallback(() => {
     stopSpeaking();
     const fullText = sections
@@ -73,8 +75,8 @@ export default function GuidePage() {
   }, []);
 
   return (
-    <main className="flex min-h-dvh flex-col">
-      <header className="flex items-center justify-between px-5 py-4">
+    <main ref={pageRef} className="flex min-h-dvh flex-col">
+      <header data-gsap="page-header" className="flex items-center justify-between px-5 py-4">
         <h1 className="text-xl font-bold text-foreground">User Guide</h1>
         <Button variant="ghost" size="sm" className="rounded-full text-xs" render={<Link href="/" />}>
           Back
@@ -109,9 +111,9 @@ export default function GuidePage() {
         </div>
       </nav>
 
-      <div className="flex flex-1 flex-col gap-4 px-5 py-4 pb-5">
+      <div data-gsap="page-content" className="flex flex-1 flex-col gap-4 px-5 py-4 pb-5">
         {sections.map((s) => (
-          <Card key={s.id} id={s.id} className="bg-card/50 backdrop-blur-sm">
+          <Card key={s.id} id={s.id} data-gsap="fade-up" className="bg-card/50 backdrop-blur-sm">
             <CardHeader>
               <CardTitle className="text-lg font-semibold">{s.title}</CardTitle>
             </CardHeader>

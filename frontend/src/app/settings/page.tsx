@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
+import { usePageAnimations } from "@/hooks/usePageAnimations";
 import { useAuth } from "@/hooks/useAuth";
 import { API_URL } from "@/lib/constants";
 import { speak } from "@/lib/speak";
@@ -36,6 +37,7 @@ interface Preferences {
 }
 
 export default function SettingsPage() {
+  const pageRef = usePageAnimations();
   const { uid, getToken } = useAuth();
   const [prefs, setPrefs] = useState<Preferences>({});
   const [saving, setSaving] = useState(false);
@@ -90,8 +92,8 @@ export default function SettingsPage() {
   const isToggled = (key: keyof Preferences) => prefs[key] === "true";
 
   return (
-    <main className="flex min-h-dvh flex-col">
-      <header className="flex items-center justify-between px-5 py-4">
+    <main ref={pageRef} className="flex min-h-dvh flex-col">
+      <header data-gsap="page-header" className="flex items-center justify-between px-5 py-4">
         <h1 className="text-xl font-bold text-foreground">Settings</h1>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" className="rounded-full text-xs" render={<Link href="/" />}>
@@ -100,13 +102,13 @@ export default function SettingsPage() {
         </div>
       </header>
 
-      <div className="flex flex-1 flex-col gap-4 px-5 pb-5">
+      <div data-gsap="page-content" className="flex flex-1 flex-col gap-4 px-5 pb-5">
         {saving && (
           <p className="text-xs text-blue-400 animate-pulse" aria-live="polite">Saving...</p>
         )}
 
         {/* Speech Rate */}
-        <Card className="bg-card/50 backdrop-blur-sm">
+        <Card data-gsap="fade-up" className="bg-card/50 backdrop-blur-sm">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">Speech Rate</CardTitle>
           </CardHeader>
@@ -133,7 +135,7 @@ export default function SettingsPage() {
         </Card>
 
         {/* Verbosity */}
-        <Card className="bg-card/50 backdrop-blur-sm">
+        <Card data-gsap="fade-up" className="bg-card/50 backdrop-blur-sm">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">Verbosity</CardTitle>
           </CardHeader>
@@ -162,7 +164,7 @@ export default function SettingsPage() {
         </Card>
 
         {/* Language */}
-        <Card className="bg-card/50 backdrop-blur-sm">
+        <Card data-gsap="fade-up" className="bg-card/50 backdrop-blur-sm">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">Language</CardTitle>
           </CardHeader>
@@ -188,7 +190,7 @@ export default function SettingsPage() {
         </Card>
 
         {/* Font Size */}
-        <Card className="bg-card/50 backdrop-blur-sm">
+        <Card data-gsap="fade-up" className="bg-card/50 backdrop-blur-sm">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">Font Size</CardTitle>
           </CardHeader>
@@ -219,7 +221,7 @@ export default function SettingsPage() {
         <Separator className="opacity-50" />
 
         {/* Toggles */}
-        <Card className="bg-card/50 backdrop-blur-sm">
+        <Card data-gsap="fade-up" className="bg-card/50 backdrop-blur-sm">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">Accessibility</CardTitle>
           </CardHeader>

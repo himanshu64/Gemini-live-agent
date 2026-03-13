@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
+import { usePageAnimations } from "@/hooks/usePageAnimations";
 import { useAuth } from "@/hooks/useAuth";
 import { API_URL } from "@/lib/constants";
 import Image from "next/image";
@@ -30,6 +31,7 @@ function formatTime(seconds: number): string {
 }
 
 export default function DashboardPage() {
+  const pageRef = usePageAnimations();
   const { user, uid, getToken } = useAuth();
   const [usage, setUsage] = useState<UsageData | null>(null);
   const [error, setError] = useState("");
@@ -116,8 +118,8 @@ export default function DashboardPage() {
     : 0;
 
   return (
-    <main className="flex min-h-dvh flex-col">
-      <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-lg border-b border-border">
+    <main ref={pageRef} className="flex min-h-dvh flex-col">
+      <header data-gsap="page-header" className="sticky top-0 z-40 bg-background/80 backdrop-blur-lg border-b border-border">
         <div className="max-w-6xl mx-auto flex items-center justify-between px-5 py-3">
           <h1 className="text-xl font-bold text-foreground">Dashboard</h1>
           <div className="flex items-center gap-2">
@@ -133,9 +135,9 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      <div className="flex flex-1 flex-col gap-4 px-5 pb-5">
+      <div data-gsap="page-content" className="flex flex-1 flex-col gap-4 px-5 pb-5">
         {/* Account */}
-        <Card className="bg-card/50 backdrop-blur-sm">
+        <Card data-gsap="fade-up" className="bg-card/50 backdrop-blur-sm">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">Account</CardTitle>
           </CardHeader>
@@ -163,7 +165,7 @@ export default function DashboardPage() {
         </Card>
 
         {/* Usage */}
-        <Card className="bg-card/50 backdrop-blur-sm">
+        <Card data-gsap="fade-up" className="bg-card/50 backdrop-blur-sm">
           <CardHeader className="flex-row items-center justify-between">
             <CardTitle className="text-lg font-semibold">Today&apos;s Usage</CardTitle>
             <Button variant="outline" size="sm" className="rounded-full border-foreground/20 text-xs" onClick={fetchUsage} disabled={fetching}>
@@ -209,7 +211,7 @@ export default function DashboardPage() {
         </Card>
 
         {/* Plan */}
-        <Card className="bg-card/50 backdrop-blur-sm">
+        <Card data-gsap="fade-up" className="bg-card/50 backdrop-blur-sm">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">Plan Details</CardTitle>
           </CardHeader>
@@ -226,7 +228,7 @@ export default function DashboardPage() {
         </Card>
 
         {/* Captured Frames */}
-        <Card className="bg-card/50 backdrop-blur-sm">
+        <Card data-gsap="fade-up" className="bg-card/50 backdrop-blur-sm">
           <CardHeader className="flex-row items-center justify-between">
             <CardTitle className="text-lg font-semibold">Captured Frames</CardTitle>
             <Button variant="outline" size="sm" className="rounded-full border-foreground/20 text-xs" onClick={fetchFrames} disabled={framesLoading}>

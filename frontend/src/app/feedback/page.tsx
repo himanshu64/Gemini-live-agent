@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { usePageAnimations } from "@/hooks/usePageAnimations";
 import { speak, stopSpeaking } from "@/lib/speak";
 import { API_URL } from "@/lib/constants";
 import Link from "next/link";
@@ -44,6 +45,7 @@ const STEPS = [
 ];
 
 export default function FeedbackPage() {
+  const pageRef = usePageAnimations();
   const [step, setStep] = useState(0);
   const [values, setValues] = useState<Record<string, string>>({
     name: "",
@@ -184,9 +186,9 @@ export default function FeedbackPage() {
   }
 
   return (
-    <main className="flex min-h-dvh flex-col">
+    <main ref={pageRef} className="flex min-h-dvh flex-col">
       {/* Header */}
-      <header className="flex items-center justify-between px-5 sm:px-8 py-4">
+      <header data-gsap="page-header" className="flex items-center justify-between px-5 sm:px-8 py-4">
         <Link href="/" className="text-xl font-bold text-foreground">
           SightLine
         </Link>
@@ -206,7 +208,7 @@ export default function FeedbackPage() {
       </div>
 
       {/* Step content */}
-      <div className="flex flex-1 flex-col items-center justify-center px-5 sm:px-8 py-10 gap-6 max-w-lg mx-auto w-full">
+      <div data-gsap="page-content" className="flex flex-1 flex-col items-center justify-center px-5 sm:px-8 py-10 gap-6 max-w-lg mx-auto w-full">
         <h2 className="text-2xl sm:text-3xl font-bold text-foreground text-center">
           {currentStep.question}
         </h2>

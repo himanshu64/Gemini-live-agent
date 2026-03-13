@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
+import { usePageAnimations } from "@/hooks/usePageAnimations";
 import { useAuth } from "@/hooks/useAuth";
 import { API_URL } from "@/lib/constants";
 import Link from "next/link";
@@ -73,6 +74,7 @@ const BADGE_ICONS: Record<string, string> = {
 // ---------------------------------------------------------------------------
 
 export default function RewardsPage() {
+  const pageRef = usePageAnimations();
   const { uid, getToken } = useAuth();
   const [tab, setTab] = useState<Tab>("profile");
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -152,8 +154,8 @@ export default function RewardsPage() {
   const xpPct = profile ? (profile.xp_for_next_level > 0 ? (profile.xp_into_level / profile.xp_for_next_level) * 100 : 100) : 0;
 
   return (
-    <main className="flex min-h-dvh flex-col">
-      <header className="flex items-center justify-between px-5 py-4">
+    <main ref={pageRef} className="flex min-h-dvh flex-col">
+      <header data-gsap="page-header" className="flex items-center justify-between px-5 py-4">
         <h1 className="text-xl font-bold text-foreground">Rewards</h1>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" className="rounded-full text-xs" onClick={loadData} disabled={loadingData}>
@@ -188,7 +190,7 @@ export default function RewardsPage() {
         </div>
       )}
 
-      <div className="flex flex-1 flex-col gap-4 px-5 pb-5">
+      <div data-gsap="page-content" className="flex flex-1 flex-col gap-4 px-5 pb-5">
         {loadingData && !profile ? (
           <div className="flex items-center justify-center py-12">
             <div className="h-6 w-6 animate-spin rounded-full border-2 border-foreground/20 border-t-foreground" />

@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { usePageAnimations } from "@/hooks/usePageAnimations";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuthContext } from "@/lib/auth/auth-provider";
@@ -20,6 +21,7 @@ declare global {
 }
 
 function LoginForm() {
+  const pageRef = usePageAnimations();
   const { user, login, loading, error } = useAuthContext();
   const [scriptLoaded, setScriptLoaded] = useState(
     () => typeof document !== "undefined" && !!document.getElementById("gis-script")
@@ -78,10 +80,10 @@ function LoginForm() {
   if (user) return null;
 
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center gap-8 px-6 py-10">
+    <main ref={pageRef} className="flex min-h-dvh flex-col items-center justify-center gap-8 px-6 py-10">
       <div className="w-full max-w-sm flex flex-col items-center gap-8">
         {/* Logo */}
-        <div className="flex flex-col items-center gap-2">
+        <div data-gsap="page-header" className="flex flex-col items-center gap-2">
           <Link href="/" className="text-2xl font-bold text-primary tracking-tight">
             SightLine
           </Link>
@@ -91,7 +93,7 @@ function LoginForm() {
         </div>
 
         {/* Card */}
-        <div className="w-full rounded-xl border border-border bg-card p-8 shadow-sm flex flex-col items-center gap-6">
+        <div data-gsap="page-content" className="w-full rounded-xl border border-border bg-card p-8 shadow-sm flex flex-col items-center gap-6">
           <h1 className="text-xl font-semibold text-foreground">Welcome back</h1>
 
           {loading && (

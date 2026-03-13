@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
+import { usePageAnimations } from "@/hooks/usePageAnimations";
 import { useAuthContext } from "@/lib/auth/auth-provider";
 import { useRouter } from "next/navigation";
 import { API_URL } from "@/lib/constants";
@@ -189,6 +190,7 @@ function BarChart({ data, labelKey, valueKey, maxValue, barColor }: {
 // ---------------------------------------------------------------------------
 
 export default function AdminDashboard() {
+  const pageRef = usePageAnimations();
   const { user, getToken } = useAuthContext();
   const uid = user?.id || null;
   const router = useRouter();
@@ -355,9 +357,9 @@ export default function AdminDashboard() {
   const totalModes = Object.values(modes).reduce((a, b) => a + b, 0);
 
   return (
-    <main className="flex min-h-dvh flex-col">
+    <main ref={pageRef} className="flex min-h-dvh flex-col">
       {/* Header */}
-      <header className="flex items-center justify-between px-5 py-4">
+      <header data-gsap="page-header" className="flex items-center justify-between px-5 py-4">
         <div className="flex items-center gap-3">
           <h1 className="text-xl font-bold text-foreground">Admin</h1>
           <Badge variant="outline" className="text-[10px]">Dashboard</Badge>
@@ -402,7 +404,7 @@ export default function AdminDashboard() {
       )}
 
       {/* Content */}
-      <div className="flex flex-1 flex-col gap-4 px-5 pb-5">
+      <div data-gsap="page-content" className="flex flex-1 flex-col gap-4 px-5 pb-5">
         {loadingData && !stats && !users.length && !trends.length && !serverStats ? (
           <div className="flex items-center justify-center py-12">
             <div className="flex flex-col items-center gap-3">
