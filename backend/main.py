@@ -22,7 +22,6 @@ from services.jwt_auth_service import (
     create_refresh_token,
     verify_access_token,
     verify_refresh_token,
-    revoke_refresh_token,
     get_or_create_user,
 )
 from services.firestore_service import get_user_preferences, save_user_preference
