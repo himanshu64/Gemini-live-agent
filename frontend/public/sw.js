@@ -18,16 +18,22 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
-  // Network-first strategy for API calls and WebSocket
-  if (event.request.url.includes("/ws") || event.request.url.includes("/api")) {
+  // Only cache GET requests; skip API calls and WebSocket
+  if (
+    event.request.method !== "GET" ||
+    event.request.url.includes("/ws") ||
+    event.request.url.includes("/api")
+  ) {
     return;
   }
 
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        const clone = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+        if (response.ok) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+        }
         return response;
       })
       .catch(() => caches.match(event.request))

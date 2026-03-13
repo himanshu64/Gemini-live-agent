@@ -31,7 +31,7 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "connect-src 'self' wss: https: ws:",
               "img-src 'self' data: blob: https://lh3.googleusercontent.com https://*.googleusercontent.com",
-              "frame-src https://challenges.cloudflare.com https://accounts.google.com https://apis.google.com",
+              "frame-src https://challenges.cloudflare.com https://accounts.google.com https://apis.google.com https://*.firebaseapp.com",
               "frame-ancestors 'none'",
             ].join("; "),
           },
