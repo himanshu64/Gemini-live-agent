@@ -44,7 +44,6 @@ from services.gamification_service import (
     award_xp,
     update_streak,
     check_and_award_badges,
-    record_session_minutes,
     get_rewards,
     claim_reward,
     earn_loyalty_points,

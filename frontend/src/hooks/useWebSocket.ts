@@ -149,7 +149,7 @@ export function useWebSocket({
         ws.close();
       };
     });
-  }, [autoReconnect]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [autoReconnect]);
 
   const scheduleReconnect = useCallback(() => {
     clearReconnectTimer();

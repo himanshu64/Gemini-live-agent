@@ -36,19 +36,17 @@ const STEPS = [
 
 const ONBOARDING_KEY = "sightline_onboarding_done";
 
-export default function OnboardingModal({ onComplete }: Props) {
-  const [show, setShow] = useState(false);
-  const [step, setStep] = useState(0);
+function getInitialShow(): boolean {
+  try {
+    return !localStorage.getItem(ONBOARDING_KEY);
+  } catch {
+    return false;
+  }
+}
 
-  useEffect(() => {
-    let shouldShow = false;
-    try {
-      shouldShow = !localStorage.getItem(ONBOARDING_KEY);
-    } catch {
-      // localStorage unavailable
-    }
-    if (shouldShow) setShow(true);
-  }, []);
+export default function OnboardingModal({ onComplete }: Props) {
+  const [show, setShow] = useState(getInitialShow);
+  const [step, setStep] = useState(0);
 
   useEffect(() => {
     if (show) {
