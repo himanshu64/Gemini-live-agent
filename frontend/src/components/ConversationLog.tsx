@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef } from "react";
+import Image from "next/image";
 
 export interface ConversationEntry {
   id: string;
@@ -82,12 +83,14 @@ export default function ConversationLog({ entries, isRunning, onBookmark, onExpo
                 {entry.images && entry.images.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-2">
                     {entry.images.map((src, i) => (
-                      <img
+                      <Image
                         key={i}
                         src={src}
                         alt={`Story illustration ${i + 1}`}
-                        className="rounded-lg max-w-[200px] max-h-[200px] object-cover border border-border"
-                        loading="lazy"
+                        width={200}
+                        height={200}
+                        className="rounded-lg object-cover border border-border"
+                        unoptimized
                       />
                     ))}
                   </div>
