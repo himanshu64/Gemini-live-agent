@@ -1,7 +1,5 @@
 "use client";
-import { useCallback, useRef, useState } from "react";
 import Link from "next/link";
-import { API_URL } from "@/lib/constants";
 
 const FEATURES = [
   {
@@ -34,71 +32,6 @@ const HOW_IT_WORKS = [
 ];
 
 export default function LandingPage() {
-  const [feedbackText, setFeedbackText] = useState("");
-  const [feedbackName, setFeedbackName] = useState("");
-  const [feedbackEmail, setFeedbackEmail] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const [error, setError] = useState("");
-  const [isListening, setIsListening] = useState(false);
-  const recognitionRef = useRef<ReturnType<typeof createRecognition> | null>(null);
-
-  const handleSubmitFeedback = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!feedbackText.trim()) return;
-
-    setSubmitting(true);
-    setError("");
-    try {
-      const res = await fetch(`${API_URL}/api/feedback`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: feedbackName.trim() || "Anonymous",
-          email: feedbackEmail.trim() || null,
-          message: feedbackText.trim(),
-        }),
-      });
-      if (!res.ok) throw new Error("Failed to submit");
-      setSubmitted(true);
-      setFeedbackText("");
-      setFeedbackName("");
-      setFeedbackEmail("");
-    } catch {
-      setError("Failed to submit feedback. Please try again.");
-    } finally {
-      setSubmitting(false);
-    }
-  }, [feedbackText, feedbackName, feedbackEmail]);
-
-  // Voice input for feedback
-  const toggleVoiceInput = useCallback(() => {
-    if (isListening) {
-      recognitionRef.current?.stop();
-      setIsListening(false);
-      return;
-    }
-
-    const recognition = createRecognition();
-    if (!recognition) {
-      setError("Voice input not supported in this browser.");
-      return;
-    }
-
-    recognitionRef.current = recognition;
-    recognition.onresult = (event: { results: SpeechRecognitionResultList }) => {
-      let transcript = "";
-      for (let i = 0; i < event.results.length; i++) {
-        transcript += event.results[i][0].transcript;
-      }
-      setFeedbackText((prev) => (prev ? prev + " " + transcript : transcript));
-    };
-    recognition.onend = () => setIsListening(false);
-    recognition.onerror = () => setIsListening(false);
-    recognition.start();
-    setIsListening(true);
-  }, [isListening]);
-
   return (
     <div className="flex min-h-dvh flex-col">
       {/* Nav */}
@@ -110,6 +43,12 @@ export default function LandingPage() {
             className="rounded-full px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
             Guide
+          </Link>
+          <Link
+            href="/feedback"
+            className="rounded-full px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Feedback
           </Link>
           <Link
             href="/legal"
@@ -235,86 +174,21 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Feedback Form */}
+      {/* Feedback CTA */}
       <section className="px-5 sm:px-8 py-12 sm:py-16 bg-card/30" id="feedback">
-        <div className="max-w-lg mx-auto">
-          <h3 className="font-serif text-2xl sm:text-3xl italic text-foreground text-center mb-2">
+        <div className="max-w-lg mx-auto text-center flex flex-col items-center gap-5">
+          <h3 className="font-serif text-2xl sm:text-3xl italic text-foreground">
             Share your feedback
           </h3>
-          <p className="text-sm text-muted-foreground text-center mb-8">
-            Help us improve SightLine. Type or speak your feedback below.
+          <p className="text-sm text-muted-foreground max-w-sm">
+            Help us improve SightLine. Answer a few quick questions — you can type or speak your answers.
           </p>
-
-          {submitted ? (
-            <div className="rounded-2xl border border-green-500/30 bg-green-500/10 p-6 text-center">
-              <p className="text-green-400 font-semibold text-lg mb-1">Thank you!</p>
-              <p className="text-sm text-muted-foreground">Your feedback has been submitted.</p>
-              <button
-                onClick={() => setSubmitted(false)}
-                className="mt-4 rounded-full border border-border px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Send another
-              </button>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmitFeedback} className="flex flex-col gap-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <input
-                  type="text"
-                  placeholder="Your name (optional)"
-                  value={feedbackName}
-                  onChange={(e) => setFeedbackName(e.target.value)}
-                  className="rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-ring"
-                  aria-label="Your name"
-                />
-                <input
-                  type="email"
-                  placeholder="Email (optional)"
-                  value={feedbackEmail}
-                  onChange={(e) => setFeedbackEmail(e.target.value)}
-                  className="rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-ring"
-                  aria-label="Your email"
-                />
-              </div>
-
-              <div className="relative">
-                <textarea
-                  placeholder="Tell us what you think — type or tap the mic to speak..."
-                  value={feedbackText}
-                  onChange={(e) => setFeedbackText(e.target.value)}
-                  rows={4}
-                  required
-                  className="w-full rounded-xl border border-border bg-background px-4 py-3 pr-14 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-ring resize-none"
-                  aria-label="Your feedback message"
-                />
-                <button
-                  type="button"
-                  onClick={toggleVoiceInput}
-                  className={`absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full transition-colors ${
-                    isListening
-                      ? "bg-red-500/20 text-red-400 animate-pulse"
-                      : "bg-muted/50 text-muted-foreground hover:bg-muted"
-                  }`}
-                  aria-label={isListening ? "Stop voice input" : "Start voice input"}
-                  title={isListening ? "Listening... tap to stop" : "Speak your feedback"}
-                >
-                  {isListening ? "⏹" : "🎤"}
-                </button>
-              </div>
-
-              {error && (
-                <p className="text-sm text-red-400">{error}</p>
-              )}
-
-              <button
-                type="submit"
-                disabled={submitting || !feedbackText.trim()}
-                className="rounded-full bg-foreground px-6 py-3.5 text-base font-semibold text-background hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                {submitting ? "Sending..." : "Submit Feedback"}
-              </button>
-            </form>
-          )}
+          <Link
+            href="/feedback"
+            className="rounded-full bg-foreground px-8 py-3.5 text-base font-semibold text-background hover:opacity-90 transition-opacity"
+          >
+            Give Feedback
+          </Link>
         </div>
       </section>
 
@@ -324,6 +198,7 @@ export default function LandingPage() {
           <p className="font-serif italic text-sm text-foreground">SightLine</p>
           <div className="flex gap-4">
             <Link href="/guide" className="hover:text-foreground transition-colors">Guide</Link>
+            <Link href="/feedback" className="hover:text-foreground transition-colors">Feedback</Link>
             <Link href="/legal" className="hover:text-foreground transition-colors">Legal</Link>
             <Link href="/live" className="hover:text-foreground transition-colors">Launch App</Link>
           </div>
@@ -332,17 +207,4 @@ export default function LandingPage() {
       </footer>
     </div>
   );
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function createRecognition(): any {
-  if (typeof window === "undefined") return null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-  if (!SpeechRecognition) return null;
-  const recognition = new SpeechRecognition();
-  recognition.continuous = true;
-  recognition.interimResults = false;
-  recognition.lang = "en-US";
-  return recognition;
 }

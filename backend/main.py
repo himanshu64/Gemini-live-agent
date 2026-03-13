@@ -421,10 +421,18 @@ async def submit_feedback(request: Request) -> dict:
     from services.firestore_service import get_client as _get_fs_client
     fs = _get_fs_client()
     doc_ref = fs.collection("feedback").document()
+    rating = body.get("rating")
+    if rating is not None:
+        try:
+            rating = max(1, min(5, int(rating)))
+        except (TypeError, ValueError):
+            rating = None
+
     await doc_ref.set({
         "name": name,
         "email": email or None,
         "message": message,
+        "rating": rating,
         "created_at": time.time(),
     })
 
