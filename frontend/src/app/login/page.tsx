@@ -26,7 +26,7 @@ function LoginForm() {
   const [scriptLoaded, setScriptLoaded] = useState(
     () => typeof document !== "undefined" && !!document.getElementById("gis-script")
   );
-  const [gisReady, setGisReady] = useState(false);
+  const gisInitialized = useRef(false);
   const btnRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -76,7 +76,7 @@ function LoginForm() {
       shape: "rectangular",
     });
 
-    setGisReady(true);
+    gisInitialized.current = true;
   }, [scriptLoaded, handleCredentialResponse, clientId]);
 
   if (user) return null;
@@ -126,8 +126,8 @@ function LoginForm() {
             <div className="h-10 w-80 animate-pulse rounded-md bg-muted" />
           )}
 
-          {/* Fallback Google button — only when GIS is initialized */}
-          {gisReady && (
+          {/* Fallback Google button — only when GIS script loaded and client ID exists */}
+          {scriptLoaded && clientId && (
             <button
               type="button"
               onClick={() => {
