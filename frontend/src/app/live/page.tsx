@@ -56,8 +56,8 @@ export default function Home() {
   const isOnline = useOnlineStatus();
   const { containerRef: turnstileRef, verify: verifyCaptcha } = useTurnstile();
 
-  const { data: session, status: sessionStatus } = useSession();
-  const { uid, isAnonymous, loading: authLoading, getToken } = useAuth();
+  const { status: sessionStatus } = useSession();
+  const { uid, loading: authLoading, getToken } = useAuth();
 
   // Keep refs in sync with state
   useEffect(() => { audioMutedRef.current = audioMuted; }, [audioMuted]);
