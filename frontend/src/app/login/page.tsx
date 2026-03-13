@@ -21,7 +21,9 @@ declare global {
 
 export default function LoginPage() {
   const { user, login, loading, error } = useAuthContext();
-  const [scriptLoaded, setScriptLoaded] = useState(false);
+  const [scriptLoaded, setScriptLoaded] = useState(
+    () => typeof document !== "undefined" && !!document.getElementById("gis-script")
+  );
   const btnRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
@@ -30,17 +32,14 @@ export default function LoginPage() {
   }, [user, router]);
 
   useEffect(() => {
-    if (document.getElementById("gis-script")) {
-      setScriptLoaded(true);
-      return;
-    }
+    if (scriptLoaded) return;
     const script = document.createElement("script");
     script.id = "gis-script";
     script.src = "https://accounts.google.com/gsi/client";
     script.async = true;
     script.onload = () => setScriptLoaded(true);
     document.head.appendChild(script);
-  }, []);
+  }, [scriptLoaded]);
 
   const handleCredentialResponse = useCallback(
     async (response: { credential: string }) => {

@@ -209,9 +209,6 @@ export default function AdminDashboard() {
   const [loadingData, setLoadingData] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(() => { if (!user) router.replace("/login"); }, [user, router]);
-  if (!user) return null;
-
   // --- Fetch helper ---
   const adminFetch = useCallback(async <T,>(path: string): Promise<T | null> => {
     try {
@@ -317,6 +314,10 @@ export default function AdminDashboard() {
       setTogglingUser(null);
     }
   }, [getToken]);
+
+  useEffect(() => { if (!user) router.replace("/login"); }, [user, router]);
+
+  if (!user) return null;
 
   // --- Unauthorized ---
   if (authorized === false) {
