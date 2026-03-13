@@ -5,9 +5,15 @@ import { loginWithGoogle, logoutBackend, refreshAccessToken } from "@/services/a
 import { setSession, getSession, clearSession, updateAccessToken } from "./session";
 
 export async function googleLoginAction(idToken: string) {
-  const result = await loginWithGoogle(idToken);
-  await setSession(result.access_token, result.refresh_token, result.user);
-  return result.user;
+  try {
+    const result = await loginWithGoogle(idToken);
+    await setSession(result.access_token, result.refresh_token, result.user);
+    return { user: result.user, error: null };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Login failed";
+    console.error("[googleLoginAction]", message);
+    return { user: null, error: message };
+  }
 }
 
 export async function logoutAction() {

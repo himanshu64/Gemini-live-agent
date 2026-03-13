@@ -161,7 +161,7 @@ jobs:
             --project="$GCP_PROJECT" \
             --region="$GCP_REGION" \
             --allow-unauthenticated \
-            --set-env-vars="GOOGLE_CLOUD_PROJECT=$GCP_PROJECT,GOOGLE_CLOUD_LOCATION=$GCP_REGION,GCS_BUCKET=${{ secrets.GCS_BUCKET }},GOOGLE_GENAI_USE_VERTEXAI=TRUE" \
+            --set-env-vars="GOOGLE_CLOUD_PROJECT=$GCP_PROJECT,GOOGLE_CLOUD_LOCATION=$GCP_REGION,GCS_BUCKET=${{ secrets.GCS_BUCKET }},GOOGLE_GENAI_USE_VERTEXAI=TRUE,GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }},JWT_SECRET=${{ secrets.JWT_SECRET }}" \
             --set-secrets="API_TOKEN=sightline-api-token:latest" \
             --min-instances=0 \
             --max-instances=4 \

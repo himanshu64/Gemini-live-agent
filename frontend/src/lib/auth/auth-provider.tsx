@@ -49,13 +49,16 @@ export function AuthProvider({ children, initialUser }: { children: ReactNode; i
     setLoading(true);
     setError(null);
     try {
-      const u = await googleLoginAction(googleIdToken);
-      setUser(u);
+      const result = await googleLoginAction(googleIdToken);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      setUser(result.user);
       router.push("/live");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
-      throw err;
     } finally {
       setLoading(false);
     }
