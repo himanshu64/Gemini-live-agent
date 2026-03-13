@@ -257,6 +257,13 @@ async def _require_admin(authorization: str) -> dict:
     return auth_info
 
 
+@app.get("/api/admin/check")
+async def admin_check(authorization: str = Header("")) -> dict:
+    """Lightweight check — returns {admin: true} or 403."""
+    await _require_admin(authorization)
+    return {"admin": True}
+
+
 @app.get("/api/admin/stats")
 async def admin_stats(authorization: str = Header("")) -> dict:
     """Aggregate platform statistics."""

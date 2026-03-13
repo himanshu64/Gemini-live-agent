@@ -38,6 +38,7 @@ export default function DashboardPage() {
   const [frames, setFrames] = useState<FrameData[]>([]);
   const [framesLoading, setFramesLoading] = useState(false);
   const [deletingFrame, setDeletingFrame] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const fetchUsage = useCallback(async () => {
     if (!uid) return;
@@ -101,8 +102,16 @@ export default function DashboardPage() {
     if (uid) {
       fetchUsage();
       fetchFrames();
+      // Check admin status
+      getToken().then((token) =>
+        fetch(`${API_URL}/api/admin/check`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+      ).then((res) => {
+        if (res.ok) setIsAdmin(true);
+      }).catch(() => {});
     }
-  }, [uid, fetchUsage, fetchFrames]);
+  }, [uid, fetchUsage, fetchFrames, getToken]);
 
   const usedPct = usage && usage.today_seconds_limit > 0
     ? Math.min(100, (usage.today_seconds_used / usage.today_seconds_limit) * 100)
@@ -114,9 +123,11 @@ export default function DashboardPage() {
       <header className="flex items-center justify-between px-5 py-4">
         <h1 className="font-serif text-2xl italic text-foreground">Dashboard</h1>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" className="rounded-full text-xs" render={<Link href="/admin" aria-label="Admin dashboard" />}>
-            Admin
-          </Button>
+          {isAdmin && (
+            <Button variant="ghost" size="sm" className="rounded-full text-xs" render={<Link href="/admin" aria-label="Admin dashboard" />}>
+              Admin
+            </Button>
+          )}
           <Button variant="ghost" size="sm" className="rounded-full text-xs" render={<Link href="/" />}>
             Back
           </Button>

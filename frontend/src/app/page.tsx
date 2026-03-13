@@ -1,5 +1,7 @@
 "use client";
+import { useCallback } from "react";
 import Link from "next/link";
+import { speak, stopSpeaking } from "@/lib/speak";
 
 const FEATURES = [
   {
@@ -32,6 +34,11 @@ const HOW_IT_WORKS = [
 ];
 
 export default function LandingPage() {
+  const readAloud = useCallback((title: string, description: string) => {
+    stopSpeaking();
+    speak(`${title}. ${description}`);
+  }, []);
+
   return (
     <div className="flex min-h-dvh flex-col">
       {/* Nav */}
@@ -118,16 +125,18 @@ export default function LandingPage() {
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
             {FEATURES.map((f) => (
-              <div
+              <button
                 key={f.title}
-                className="rounded-2xl border border-border bg-card/50 p-5 sm:p-6 flex flex-col gap-3"
+                onClick={() => readAloud(f.title, f.description)}
+                className="rounded-2xl border border-border bg-card/50 p-5 sm:p-6 flex flex-col gap-3 text-left transition-colors hover:bg-card/80 hover:border-foreground/20 cursor-pointer"
+                aria-label={`${f.title}. Tap to hear description.`}
               >
                 <div className="flex items-center gap-3">
                   <span className="text-2xl" aria-hidden="true">{f.icon}</span>
                   <h4 className="text-lg font-semibold text-foreground">{f.title}</h4>
                 </div>
                 <p className="text-sm text-muted-foreground leading-relaxed">{f.description}</p>
-              </div>
+              </button>
             ))}
           </div>
         </div>
@@ -141,7 +150,12 @@ export default function LandingPage() {
           </h3>
           <div className="flex flex-col gap-6">
             {HOW_IT_WORKS.map((item) => (
-              <div key={item.step} className="flex gap-4 items-start">
+              <button
+                key={item.step}
+                onClick={() => readAloud(`Step ${item.step}, ${item.title}`, item.description)}
+                className="flex gap-4 items-start text-left cursor-pointer rounded-xl p-2 -m-2 transition-colors hover:bg-card/50"
+                aria-label={`Step ${item.step}: ${item.title}. Tap to hear.`}
+              >
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-foreground text-background font-bold text-sm">
                   {item.step}
                 </div>
@@ -149,7 +163,7 @@ export default function LandingPage() {
                   <h4 className="text-base font-semibold text-foreground">{item.title}</h4>
                   <p className="text-sm text-muted-foreground mt-1">{item.description}</p>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         </div>
