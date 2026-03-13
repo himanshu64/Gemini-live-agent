@@ -74,7 +74,7 @@ const BADGE_ICONS: Record<string, string> = {
 // ---------------------------------------------------------------------------
 
 export default function RewardsPage() {
-  const { uid, loading: authLoading, getToken } = useAuth();
+  const { uid, getToken } = useAuth();
   const [tab, setTab] = useState<Tab>("profile");
   const [profile, setProfile] = useState<Profile | null>(null);
   const [allBadges, setAllBadges] = useState<Record<string, BadgeInfo>>({});

@@ -189,7 +189,7 @@ function BarChart({ data, labelKey, valueKey, maxValue, barColor }: {
 // ---------------------------------------------------------------------------
 
 export default function AdminDashboard() {
-  const { uid, loading: authLoading, getToken } = useAuth();
+  const { uid, getToken } = useAuth();
   const [tab, setTab] = useState<Tab>("overview");
   const [authorized, setAuthorized] = useState<boolean | null>(null);
   const [stats, setStats] = useState<OverviewStats | null>(null);

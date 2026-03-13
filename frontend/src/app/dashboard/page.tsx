@@ -31,7 +31,7 @@ function formatTime(seconds: number): string {
 }
 
 export default function DashboardPage() {
-  const { user, uid, isAnonymous, loading, getToken, signInWithGoogle, handleSignOut } = useAuth();
+  const { user, uid, isAnonymous, getToken, signInWithGoogle, handleSignOut } = useAuth();
   const [usage, setUsage] = useState<UsageData | null>(null);
   const [error, setError] = useState("");
   const [fetching, setFetching] = useState(false);

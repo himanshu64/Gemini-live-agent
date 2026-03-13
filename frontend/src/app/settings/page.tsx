@@ -37,7 +37,7 @@ interface Preferences {
 }
 
 export default function SettingsPage() {
-  const { uid, loading, getToken, isAnonymous, signInWithGoogle } = useAuth();
+  const { uid, getToken, isAnonymous, signInWithGoogle } = useAuth();
   const [prefs, setPrefs] = useState<Preferences>({});
   const [saving, setSaving] = useState(false);
 
