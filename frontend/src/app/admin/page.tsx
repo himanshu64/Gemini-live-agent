@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress, ProgressValue } from "@/components/ui/progress";
+import AuthGuard from "@/components/AuthGuard";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -298,18 +299,6 @@ export default function AdminDashboard() {
     }
   }, [getToken]);
 
-  // --- Loading state ---
-  if (authLoading) {
-    return (
-      <main className="flex min-h-dvh items-center justify-center" aria-busy="true">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-foreground/20 border-t-foreground" />
-          <p className="text-sm text-muted-foreground">Loading...</p>
-        </div>
-      </main>
-    );
-  }
-
   // --- Unauthorized ---
   if (authorized === false) {
     return (
@@ -345,6 +334,7 @@ export default function AdminDashboard() {
   const totalModes = Object.values(modes).reduce((a, b) => a + b, 0);
 
   return (
+    <AuthGuard>
     <main className="flex min-h-dvh flex-col">
       {/* Header */}
       <header className="flex items-center justify-between px-5 py-4">
@@ -1019,5 +1009,6 @@ export default function AdminDashboard() {
         )}
       </div>
     </main>
+    </AuthGuard>
   );
 }

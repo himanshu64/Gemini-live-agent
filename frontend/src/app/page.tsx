@@ -42,6 +42,7 @@ export default function Home() {
   const [videoDisabled, setVideoDisabled] = useState(false);
   const [audioMuted, setAudioMuted] = useState(false);
   const [sosActive, setSosActive] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const isSpeakingRef = useRef(false);
   const [activeStream, setActiveStream] = useState<MediaStream | null>(null);
   const hasAnnouncedRef = useRef(false);
@@ -59,7 +60,7 @@ export default function Home() {
 
   // Welcome announcement (only once)
   useEffect(() => {
-    if (hasAnnouncedRef.current || authLoading) return;
+    if (hasAnnouncedRef.current || authLoading || !uid) return;
     hasAnnouncedRef.current = true;
     const t = setTimeout(() => {
       speak(
@@ -67,7 +68,7 @@ export default function Home() {
       );
     }, 800);
     return () => clearTimeout(t);
-  }, [authLoading]);
+  }, [authLoading, uid]);
 
   const { isPlaying, play: playAudio, stopAll: stopAudioPlayback } = useAudioPlayback();
 
@@ -374,7 +375,6 @@ export default function Home() {
     setSosActive(true);
     setConversation((prev) => [...prev, makeEntry("system", "Emergency SOS activated")]);
 
-    // Try to get location, then send emergency message
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
@@ -385,7 +385,6 @@ export default function Home() {
           });
         },
         () => {
-          // Location denied or unavailable — send without it
           send({ type: "emergency", timestamp: Date.now() });
         },
         { timeout: 3000, enableHighAccuracy: false }
@@ -408,7 +407,6 @@ export default function Home() {
   // --- Keyboard shortcuts ---
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't trigger if typing in an input
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
 
       if (e.key === "Escape" && isRunning) {
@@ -452,6 +450,7 @@ export default function Home() {
     ? "processing" as const
     : "idle" as const;
 
+  // --- Loading state ---
   if (authLoading) {
     return (
       <main className="flex min-h-dvh items-center justify-center" aria-busy="true">
@@ -463,6 +462,41 @@ export default function Home() {
     );
   }
 
+  // --- Auth gate: show sign-in screen if no authenticated user ---
+  if (!uid) {
+    return (
+      <main className="flex min-h-dvh flex-col items-center justify-center gap-8 px-6 py-10 text-center">
+        <div className="flex flex-col items-center gap-3">
+          <h1 className="font-serif text-4xl sm:text-5xl italic text-foreground">SightLine</h1>
+          <p className="text-muted-foreground text-base sm:text-lg max-w-md leading-relaxed">
+            Your AI vision assistant. Sign in to get started.
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-4 w-full max-w-sm">
+          <button
+            onClick={signInWithGoogle}
+            className="w-full rounded-full bg-foreground px-6 py-4 text-base font-semibold text-background transition-all duration-200 hover:opacity-90 flex items-center justify-center gap-3"
+            aria-label="Sign in with Google"
+          >
+            <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" />
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+            </svg>
+            Sign in with Google
+          </button>
+        </div>
+
+        <p className="text-xs text-muted-foreground/60 max-w-xs">
+          By signing in, you agree to our{" "}
+          <Link href="/legal" className="underline hover:text-muted-foreground">terms and privacy policy</Link>.
+        </p>
+      </main>
+    );
+  }
+
   return (
     <main className="flex min-h-dvh flex-col" ref={swipeRef} aria-roledescription="AI vision assistant">
       <a href="#main-controls" className="skip-link">Skip to controls</a>
@@ -470,35 +504,77 @@ export default function Home() {
 
       <OnboardingModal onComplete={() => {}} />
 
-      {/* Header */}
-      <header className="flex items-center justify-between px-5 py-3">
-        <h1 className="font-serif text-2xl italic text-foreground">SightLine</h1>
-        <div className="flex items-center gap-1.5">
+      {/* Header — responsive */}
+      <header className="flex items-center justify-between px-4 sm:px-5 py-3 gap-2">
+        <h1 className="font-serif text-xl sm:text-2xl italic text-foreground shrink-0">SightLine</h1>
+
+        <div className="flex items-center gap-1 sm:gap-1.5">
           {audioMuted && (
-            <span className="text-xs text-red-400 font-medium px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/20" aria-label="Audio is muted">
-              🔇 Muted
+            <span className="text-[10px] sm:text-xs text-red-400 font-medium px-1.5 sm:px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 shrink-0" aria-label="Audio is muted">
+              🔇
             </span>
           )}
-          <Button variant="ghost" size="sm" className="rounded-full text-xs px-2.5" render={<Link href="/guide" aria-label="User guide" />}>
-            Guide
-          </Button>
-          <Button variant="ghost" size="sm" className="rounded-full text-xs px-2.5" render={<Link href="/settings" aria-label="Settings" />}>
-            Settings
-          </Button>
-          <Button variant="ghost" size="sm" className="rounded-full text-xs px-2.5" render={<Link href="/rewards" aria-label="Rewards" />}>
-            Rewards
-          </Button>
-          <Button variant="ghost" size="sm" className="rounded-full text-xs px-2.5" render={<Link href="/dashboard" aria-label="Dashboard" />}>
-            Dashboard
-          </Button>
-          <Button variant="ghost" size="sm" className="rounded-full text-xs px-2.5" render={<Link href="/legal" aria-label="Legal information" />}>
-            Legal
-          </Button>
+
+          {/* Desktop nav */}
+          <nav className="hidden sm:flex items-center gap-1" aria-label="Main navigation">
+            <Button variant="ghost" size="sm" className="rounded-full text-xs px-2.5" render={<Link href="/guide" aria-label="User guide" />}>
+              Guide
+            </Button>
+            <Button variant="ghost" size="sm" className="rounded-full text-xs px-2.5" render={<Link href="/settings" aria-label="Settings" />}>
+              Settings
+            </Button>
+            <Button variant="ghost" size="sm" className="rounded-full text-xs px-2.5" render={<Link href="/rewards" aria-label="Rewards" />}>
+              Rewards
+            </Button>
+            <Button variant="ghost" size="sm" className="rounded-full text-xs px-2.5" render={<Link href="/dashboard" aria-label="Dashboard" />}>
+              Dashboard
+            </Button>
+            <Button variant="ghost" size="sm" className="rounded-full text-xs px-2.5" render={<Link href="/legal" aria-label="Legal information" />}>
+              Legal
+            </Button>
+          </nav>
+
+          {/* Mobile menu button */}
+          <div className="relative sm:hidden">
+            <button
+              onClick={() => setMenuOpen((p) => !p)}
+              className="flex items-center justify-center w-9 h-9 rounded-full bg-secondary/50 text-sm"
+              aria-label={menuOpen ? "Close menu" : "Open menu"}
+              aria-expanded={menuOpen}
+            >
+              {menuOpen ? "✕" : "☰"}
+            </button>
+
+            {menuOpen && (
+              <nav
+                className="absolute right-0 top-11 z-50 flex flex-col gap-1 rounded-2xl border border-border bg-card p-2 shadow-xl min-w-[140px]"
+                aria-label="Main navigation"
+              >
+                {[
+                  { href: "/guide", label: "Guide" },
+                  { href: "/settings", label: "Settings" },
+                  { href: "/rewards", label: "Rewards" },
+                  { href: "/dashboard", label: "Dashboard" },
+                  { href: "/legal", label: "Legal" },
+                ].map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setMenuOpen(false)}
+                    className="rounded-xl px-4 py-2.5 text-sm text-foreground hover:bg-secondary/50 transition-colors"
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+              </nav>
+            )}
+          </div>
+
           {isAnonymous && (
             <Button
               variant="outline"
               size="sm"
-              className="rounded-full border-foreground/20 text-xs"
+              className="rounded-full border-foreground/20 text-[11px] sm:text-xs px-2 sm:px-2.5 shrink-0"
               onClick={signInWithGoogle}
               aria-label="Sign in with Google"
             >
@@ -515,7 +591,7 @@ export default function Home() {
       </header>
 
       {/* Main content */}
-      <div className="flex flex-1 flex-col px-5 pb-4 gap-4">
+      <div className="flex flex-1 flex-col px-4 sm:px-5 pb-4 gap-3 sm:gap-4">
         {/* Camera Preview — prominent, inline */}
         {isRunning && (
           <CameraPreview
@@ -527,7 +603,7 @@ export default function Home() {
 
         {/* Audio Visualizer */}
         {(isRunning || isReconnecting) && (
-          <div className="flex justify-center -my-2">
+          <div className="flex justify-center -my-1 sm:-my-2">
             <AudioVisualizer state={vizState} />
           </div>
         )}
@@ -554,14 +630,14 @@ export default function Home() {
 
         {/* Offline banner */}
         {!isOnline && (
-          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-300 flex items-center gap-2" role="alert">
+          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 sm:px-4 py-2.5 sm:py-3 text-sm text-amber-300 flex items-center gap-2" role="alert">
             <span>📡</span> You&apos;re offline. Waiting for network...
           </div>
         )}
 
         {/* Error banner */}
         {startError && (
-          <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300" role="alert">
+          <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 sm:px-4 py-2.5 sm:py-3 text-sm text-red-300" role="alert">
             {startError}
           </div>
         )}
@@ -594,7 +670,7 @@ export default function Home() {
           <button
             onClick={isRunning ? handleStop : handleStart}
             disabled={isReconnecting || !isOnline}
-            className={`group relative w-full overflow-hidden rounded-full py-5 text-lg font-medium tracking-wide transition-all duration-200 ease-in-out ${
+            className={`group relative w-full overflow-hidden rounded-full py-4 sm:py-5 text-base sm:text-lg font-semibold tracking-wide transition-all duration-200 ease-in-out ${
               isReconnecting
                 ? "bg-amber-500/20 text-amber-300 cursor-wait"
                 : !isOnline

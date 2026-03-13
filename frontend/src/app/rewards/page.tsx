@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { API_URL } from "@/lib/constants";
+import AuthGuard from "@/components/AuthGuard";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -142,17 +143,6 @@ export default function RewardsPage() {
     loadData();
   }, [apiFetch, loadData]);
 
-  if (authLoading) {
-    return (
-      <main className="flex min-h-dvh items-center justify-center" aria-busy="true">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-foreground/20 border-t-foreground" />
-          <p className="text-sm text-muted-foreground">Loading...</p>
-        </div>
-      </main>
-    );
-  }
-
   const tabs: { key: Tab; label: string }[] = [
     { key: "profile", label: "Profile" },
     { key: "badges", label: "Badges" },
@@ -163,6 +153,7 @@ export default function RewardsPage() {
   const xpPct = profile ? (profile.xp_for_next_level > 0 ? (profile.xp_into_level / profile.xp_for_next_level) * 100 : 100) : 0;
 
   return (
+    <AuthGuard>
     <main className="flex min-h-dvh flex-col">
       <header className="flex items-center justify-between px-5 py-4">
         <h1 className="font-serif text-2xl italic text-foreground">Rewards</h1>
@@ -453,5 +444,6 @@ export default function RewardsPage() {
         )}
       </div>
     </main>
+    </AuthGuard>
   );
 }

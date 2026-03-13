@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { API_URL } from "@/lib/constants";
 import { speak } from "@/lib/speak";
 import { speechConfig } from "@/lib/speak";
+import AuthGuard from "@/components/AuthGuard";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -87,20 +88,10 @@ export default function SettingsPage() {
     [getToken]
   );
 
-  if (loading) {
-    return (
-      <main className="flex min-h-dvh items-center justify-center" aria-busy="true">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-foreground/20 border-t-foreground" />
-          <p className="text-sm text-muted-foreground">Loading...</p>
-        </div>
-      </main>
-    );
-  }
-
   const isToggled = (key: keyof Preferences) => prefs[key] === "true";
 
   return (
+    <AuthGuard>
     <main className="flex min-h-dvh flex-col">
       <header className="flex items-center justify-between px-5 py-4">
         <h1 className="font-serif text-2xl italic text-foreground">Settings</h1>
@@ -265,5 +256,6 @@ export default function SettingsPage() {
         </Card>
       </div>
     </main>
+    </AuthGuard>
   );
 }

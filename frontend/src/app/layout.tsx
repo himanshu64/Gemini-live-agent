@@ -1,10 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import { Inter_Tight, Instrument_Serif } from "next/font/google";
+import { Atkinson_Hyperlegible_Next, Instrument_Serif } from "next/font/google";
 import { cn } from "@/lib/utils";
 import { ToastProvider } from "@/components/ToastProvider";
 
-const interTight = Inter_Tight({
+const atkinson = Atkinson_Hyperlegible_Next({
   subsets: ["latin"],
   variable: "--font-sans",
   display: "swap",
@@ -38,7 +38,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={cn("dark", interTight.variable, instrumentSerif.variable)}>
+    <html lang="en" className={cn("dark", atkinson.variable, instrumentSerif.variable)}>
       <head>
         <link rel="apple-touch-icon" href="/icon-192.png" />
         {process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && (

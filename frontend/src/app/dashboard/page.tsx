@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress, ProgressLabel, ProgressValue } from "@/components/ui/progress";
+import AuthGuard from "@/components/AuthGuard";
 
 interface FrameData {
   name: string;
@@ -103,22 +104,12 @@ export default function DashboardPage() {
     }
   }, [uid, fetchUsage, fetchFrames]);
 
-  if (loading) {
-    return (
-      <main className="flex min-h-dvh items-center justify-center" aria-busy="true">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-foreground/20 border-t-foreground" />
-          <p className="text-sm text-muted-foreground">Loading...</p>
-        </div>
-      </main>
-    );
-  }
-
   const usedPct = usage && usage.today_seconds_limit > 0
     ? Math.min(100, (usage.today_seconds_used / usage.today_seconds_limit) * 100)
     : 0;
 
   return (
+    <AuthGuard>
     <main className="flex min-h-dvh flex-col">
       <header className="flex items-center justify-between px-5 py-4">
         <h1 className="font-serif text-2xl italic text-foreground">Dashboard</h1>
@@ -287,5 +278,6 @@ export default function DashboardPage() {
         </Card>
       </div>
     </main>
+    </AuthGuard>
   );
 }
