@@ -1,4 +1,4 @@
-const CACHE_NAME = "sightline-v1";
+const CACHE_NAME = "sightline-v2";
 const PRECACHE_URLS = ["/", "/manifest.json"];
 
 self.addEventListener("install", (event) => {
