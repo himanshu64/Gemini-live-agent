@@ -2,12 +2,6 @@ import { initializeApp, getApps, type FirebaseApp } from "firebase/app";
 import {
   getAuth,
   signInAnonymously as fbSignInAnon,
-  signInWithPopup,
-  signInWithRedirect,
-  GoogleAuthProvider,
-  linkWithPopup,
-  linkWithRedirect,
-  getRedirectResult,
   signOut as fbSignOut,
   type Auth,
   type User,
@@ -39,53 +33,10 @@ function getFirebaseAuth(): Auth {
 /** Lazy-initialized auth — only accessed at runtime in the browser */
 export const auth = typeof window !== "undefined" ? getFirebaseAuth() : (null as unknown as Auth);
 
-const provider = new GoogleAuthProvider();
-
 /** Sign in anonymously — instant, no UI required */
 export async function signInAnonymously(): Promise<User> {
   const cred = await fbSignInAnon(getFirebaseAuth());
   return cred.user;
-}
-
-/** Link anonymous account to Google — preserves UID */
-export async function linkWithGoogle(): Promise<User> {
-  const a = getFirebaseAuth();
-  const user = a.currentUser;
-  if (!user) throw new Error("No current user");
-  try {
-    const cred = await linkWithPopup(user, provider);
-    return cred.user;
-  } catch (err) {
-    const code = (err as { code?: string })?.code;
-    if (code === "auth/popup-blocked" || code === "auth/popup-closed-by-user") {
-      await linkWithRedirect(user, provider);
-      return user;
-    }
-    throw err;
-  }
-}
-
-/** Direct Google sign-in */
-export async function googleSignIn(): Promise<User> {
-  const a = getFirebaseAuth();
-  try {
-    const cred = await signInWithPopup(a, provider);
-    return cred.user;
-  } catch (err) {
-    const code = (err as { code?: string })?.code;
-    if (code === "auth/popup-blocked" || code === "auth/popup-closed-by-user") {
-      await signInWithRedirect(a, provider);
-      return null as unknown as User;
-    }
-    throw err;
-  }
-}
-
-/** Check for redirect result on page load */
-export async function handleRedirectResult(): Promise<User | null> {
-  const a = getFirebaseAuth();
-  const result = await getRedirectResult(a);
-  return result?.user ?? null;
 }
 
 /** Get a fresh ID token for backend auth */

@@ -2,7 +2,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { API_URL } from "@/lib/constants";
-import AuthGuard from "@/components/AuthGuard";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -153,10 +152,9 @@ export default function RewardsPage() {
   const xpPct = profile ? (profile.xp_for_next_level > 0 ? (profile.xp_into_level / profile.xp_for_next_level) * 100 : 100) : 0;
 
   return (
-    <AuthGuard>
     <main className="flex min-h-dvh flex-col">
       <header className="flex items-center justify-between px-5 py-4">
-        <h1 className="font-serif text-2xl italic text-foreground">Rewards</h1>
+        <h1 className="text-xl font-bold text-foreground">Rewards</h1>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" className="rounded-full text-xs" onClick={loadData} disabled={loadingData}>
             {loadingData ? "..." : "Refresh"}
@@ -240,7 +238,7 @@ export default function RewardsPage() {
                 {/* Badges summary */}
                 <Card className="bg-card/50 backdrop-blur-sm">
                   <CardHeader className="flex-row items-center justify-between">
-                    <CardTitle className="font-serif italic text-lg">Badges</CardTitle>
+                    <CardTitle className="text-lg font-semibold">Badges</CardTitle>
                     <Badge variant="outline" className="text-[10px]">{profile.total_badges} / {profile.available_badges}</Badge>
                   </CardHeader>
                   <CardContent>
@@ -265,7 +263,7 @@ export default function RewardsPage() {
                 {profile.rewards_claimed.length > 0 && (
                   <Card className="bg-card/50 backdrop-blur-sm">
                     <CardHeader>
-                      <CardTitle className="font-serif italic text-lg">Claimed Rewards</CardTitle>
+                      <CardTitle className="text-lg font-semibold">Claimed Rewards</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="flex flex-col gap-1.5">
@@ -288,7 +286,7 @@ export default function RewardsPage() {
             {tab === "badges" && profile && (
               <Card className="bg-card/50 backdrop-blur-sm">
                 <CardHeader className="flex-row items-center justify-between">
-                  <CardTitle className="font-serif italic text-lg">All Badges</CardTitle>
+                  <CardTitle className="text-lg font-semibold">All Badges</CardTitle>
                   <Badge variant="outline" className="text-[10px]">{profile.total_badges} earned</Badge>
                 </CardHeader>
                 <CardContent>
@@ -344,7 +342,7 @@ export default function RewardsPage() {
 
                 <Card className="bg-card/50 backdrop-blur-sm">
                   <CardHeader>
-                    <CardTitle className="font-serif italic text-lg">Available Rewards</CardTitle>
+                    <CardTitle className="text-lg font-semibold">Available Rewards</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="flex flex-col gap-3">
@@ -390,7 +388,7 @@ export default function RewardsPage() {
             {tab === "leaderboard" && (
               <Card className="bg-card/50 backdrop-blur-sm">
                 <CardHeader>
-                  <CardTitle className="font-serif italic text-lg">Leaderboard</CardTitle>
+                  <CardTitle className="text-lg font-semibold">Leaderboard</CardTitle>
                 </CardHeader>
                 <CardContent>
                   {leaderboard.length === 0 ? (
@@ -444,6 +442,5 @@ export default function RewardsPage() {
         )}
       </div>
     </main>
-    </AuthGuard>
   );
 }

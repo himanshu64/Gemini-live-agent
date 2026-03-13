@@ -156,7 +156,7 @@ export default function FeedbackPage() {
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-500/10 border border-green-500/30">
           <span className="text-3xl">&#10003;</span>
         </div>
-        <h1 className="font-serif text-3xl sm:text-4xl italic text-foreground">Thank you!</h1>
+        <h1 className="text-3xl sm:text-4xl font-bold text-foreground">Thank you!</h1>
         <p className="text-muted-foreground text-sm sm:text-base max-w-sm">
           Your feedback helps us make SightLine better for everyone.
         </p>
@@ -187,7 +187,7 @@ export default function FeedbackPage() {
     <main className="flex min-h-dvh flex-col">
       {/* Header */}
       <header className="flex items-center justify-between px-5 sm:px-8 py-4">
-        <Link href="/" className="font-serif text-xl italic text-foreground">
+        <Link href="/" className="text-xl font-bold text-foreground">
           SightLine
         </Link>
         <span className="text-xs text-muted-foreground">
@@ -207,7 +207,7 @@ export default function FeedbackPage() {
 
       {/* Step content */}
       <div className="flex flex-1 flex-col items-center justify-center px-5 sm:px-8 py-10 gap-6 max-w-lg mx-auto w-full">
-        <h2 className="font-serif text-2xl sm:text-3xl italic text-foreground text-center">
+        <h2 className="text-2xl sm:text-3xl font-bold text-foreground text-center">
           {currentStep.question}
         </h2>
 

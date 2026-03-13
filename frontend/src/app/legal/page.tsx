@@ -23,7 +23,7 @@ export default function LegalPage() {
   return (
     <main className="flex min-h-dvh flex-col">
       <header className="flex items-center justify-between px-5 py-4">
-        <h1 className="font-serif text-2xl italic text-foreground">Legal &amp; Policies</h1>
+        <h1 className="text-xl font-bold text-foreground">Legal &amp; Policies</h1>
         <Button variant="ghost" size="sm" className="rounded-full text-xs" render={<Link href="/" />}>
           Home
         </Button>
@@ -51,7 +51,7 @@ export default function LegalPage() {
         {section === "privacy" && (
           <Card className="bg-card/50 backdrop-blur-sm">
             <CardHeader>
-              <CardTitle className="font-serif italic text-lg">Privacy Policy</CardTitle>
+              <CardTitle className="text-lg font-semibold">Privacy Policy</CardTitle>
             </CardHeader>
             <CardContent className="prose prose-sm prose-invert max-w-none">
               <p className="text-xs text-muted-foreground mb-4">Last updated: {LAST_UPDATED}</p>
@@ -116,7 +116,7 @@ export default function LegalPage() {
         {section === "terms" && (
           <Card className="bg-card/50 backdrop-blur-sm">
             <CardHeader>
-              <CardTitle className="font-serif italic text-lg">End User License Agreement (EULA)</CardTitle>
+              <CardTitle className="text-lg font-semibold">End User License Agreement (EULA)</CardTitle>
             </CardHeader>
             <CardContent className="prose prose-sm prose-invert max-w-none">
               <p className="text-xs text-muted-foreground mb-4">Last updated: {LAST_UPDATED}</p>
@@ -180,7 +180,7 @@ export default function LegalPage() {
         {section === "hipaa" && (
           <Card className="bg-card/50 backdrop-blur-sm">
             <CardHeader>
-              <CardTitle className="font-serif italic text-lg">HIPAA Compliance Statement</CardTitle>
+              <CardTitle className="text-lg font-semibold">HIPAA Compliance Statement</CardTitle>
             </CardHeader>
             <CardContent className="prose prose-sm prose-invert max-w-none">
               <p className="text-xs text-muted-foreground mb-4">Last updated: {LAST_UPDATED}</p>
@@ -238,7 +238,7 @@ export default function LegalPage() {
         {section === "data-retention" && (
           <Card className="bg-card/50 backdrop-blur-sm">
             <CardHeader>
-              <CardTitle className="font-serif italic text-lg">Data Retention Policy</CardTitle>
+              <CardTitle className="text-lg font-semibold">Data Retention Policy</CardTitle>
             </CardHeader>
             <CardContent className="prose prose-sm prose-invert max-w-none">
               <p className="text-xs text-muted-foreground mb-4">Last updated: {LAST_UPDATED}</p>
@@ -292,7 +292,7 @@ export default function LegalPage() {
         {section === "soc2" && (
           <Card className="bg-card/50 backdrop-blur-sm">
             <CardHeader>
-              <CardTitle className="font-serif italic text-lg">SOC 2 Compliance</CardTitle>
+              <CardTitle className="text-lg font-semibold">SOC 2 Compliance</CardTitle>
             </CardHeader>
             <CardContent className="prose prose-sm prose-invert max-w-none">
               <p className="text-xs text-muted-foreground mb-4">Last updated: {LAST_UPDATED}</p>
@@ -363,7 +363,7 @@ export default function LegalPage() {
         {section === "accessibility" && (
           <Card className="bg-card/50 backdrop-blur-sm">
             <CardHeader>
-              <CardTitle className="font-serif italic text-lg">Accessibility Statement</CardTitle>
+              <CardTitle className="text-lg font-semibold">Accessibility Statement</CardTitle>
             </CardHeader>
             <CardContent className="prose prose-sm prose-invert max-w-none">
               <p className="text-xs text-muted-foreground mb-4">Last updated: {LAST_UPDATED}</p>

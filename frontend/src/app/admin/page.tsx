@@ -1,13 +1,13 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuthContext } from "@/lib/auth/auth-provider";
+import { useRouter } from "next/navigation";
 import { API_URL } from "@/lib/constants";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress, ProgressValue } from "@/components/ui/progress";
-import AuthGuard from "@/components/AuthGuard";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -189,7 +189,9 @@ function BarChart({ data, labelKey, valueKey, maxValue, barColor }: {
 // ---------------------------------------------------------------------------
 
 export default function AdminDashboard() {
-  const { uid, getToken } = useAuth();
+  const { user, getToken } = useAuthContext();
+  const uid = user?.id || null;
+  const router = useRouter();
   const [tab, setTab] = useState<Tab>("overview");
   const [authorized, setAuthorized] = useState<boolean | null>(null);
   const [stats, setStats] = useState<OverviewStats | null>(null);
@@ -206,6 +208,9 @@ export default function AdminDashboard() {
   const [togglingUser, setTogglingUser] = useState<string | null>(null);
   const [loadingData, setLoadingData] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => { if (!user) router.replace("/login"); }, [user, router]);
+  if (!user) return null;
 
   // --- Fetch helper ---
   const adminFetch = useCallback(async <T,>(path: string): Promise<T | null> => {
@@ -318,7 +323,7 @@ export default function AdminDashboard() {
     return (
       <main className="flex min-h-dvh flex-col items-center justify-center gap-4 px-5">
         <div className="text-center">
-          <h1 className="font-serif text-2xl italic mb-2">Access Denied</h1>
+          <h1 className="text-xl font-bold mb-2">Access Denied</h1>
           <p className="text-sm text-muted-foreground">
             You need admin privileges to view this page.
           </p>
@@ -349,12 +354,11 @@ export default function AdminDashboard() {
   const totalModes = Object.values(modes).reduce((a, b) => a + b, 0);
 
   return (
-    <AuthGuard>
     <main className="flex min-h-dvh flex-col">
       {/* Header */}
       <header className="flex items-center justify-between px-5 py-4">
         <div className="flex items-center gap-3">
-          <h1 className="font-serif text-2xl italic text-foreground">Admin</h1>
+          <h1 className="text-xl font-bold text-foreground">Admin</h1>
           <Badge variant="outline" className="text-[10px]">Dashboard</Badge>
         </div>
         <div className="flex items-center gap-2">
@@ -430,7 +434,7 @@ export default function AdminDashboard() {
                 {/* User breakdown */}
                 <Card className="bg-card/50 backdrop-blur-sm">
                   <CardHeader>
-                    <CardTitle className="font-serif italic text-lg">User Breakdown</CardTitle>
+                    <CardTitle className="text-lg font-semibold">User Breakdown</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="flex flex-col gap-3">
@@ -460,7 +464,7 @@ export default function AdminDashboard() {
                 {totalModes > 0 && (
                   <Card className="bg-card/50 backdrop-blur-sm">
                     <CardHeader>
-                      <CardTitle className="font-serif italic text-lg">Mode Distribution</CardTitle>
+                      <CardTitle className="text-lg font-semibold">Mode Distribution</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="flex flex-col gap-2">
@@ -488,7 +492,7 @@ export default function AdminDashboard() {
                 {/* Platform health */}
                 <Card className="bg-card/50 backdrop-blur-sm">
                   <CardHeader>
-                    <CardTitle className="font-serif italic text-lg">Platform Health</CardTitle>
+                    <CardTitle className="text-lg font-semibold">Platform Health</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-2 gap-y-2 text-sm">
@@ -520,7 +524,7 @@ export default function AdminDashboard() {
             {tab === "users" && (
               <Card className="bg-card/50 backdrop-blur-sm">
                 <CardHeader className="flex-row items-center justify-between">
-                  <CardTitle className="font-serif italic text-lg">All Users ({users.length})</CardTitle>
+                  <CardTitle className="text-lg font-semibold">All Users ({users.length})</CardTitle>
                 </CardHeader>
                 <CardContent>
                   {users.length === 0 ? (
@@ -586,7 +590,7 @@ export default function AdminDashboard() {
                 {/* Usage chart */}
                 <Card className="bg-card/50 backdrop-blur-sm">
                   <CardHeader>
-                    <CardTitle className="font-serif italic text-lg">Usage (minutes/day)</CardTitle>
+                    <CardTitle className="text-lg font-semibold">Usage (minutes/day)</CardTitle>
                   </CardHeader>
                   <CardContent>
                     {trends.length === 0 ? (
@@ -600,7 +604,7 @@ export default function AdminDashboard() {
                 {/* Active users chart */}
                 <Card className="bg-card/50 backdrop-blur-sm">
                   <CardHeader>
-                    <CardTitle className="font-serif italic text-lg">Active Users/Day</CardTitle>
+                    <CardTitle className="text-lg font-semibold">Active Users/Day</CardTitle>
                   </CardHeader>
                   <CardContent>
                     {trends.length === 0 ? (
@@ -614,7 +618,7 @@ export default function AdminDashboard() {
                 {/* Retention */}
                 <Card className="bg-card/50 backdrop-blur-sm">
                   <CardHeader className="flex-row items-center justify-between">
-                    <CardTitle className="font-serif italic text-lg">Retention</CardTitle>
+                    <CardTitle className="text-lg font-semibold">Retention</CardTitle>
                     <Badge variant="outline" className="text-[10px]">{totalUnique} unique users</Badge>
                   </CardHeader>
                   <CardContent>
@@ -646,7 +650,7 @@ export default function AdminDashboard() {
                 {/* User Journeys */}
                 <Card className="bg-card/50 backdrop-blur-sm">
                   <CardHeader className="flex-row items-center justify-between">
-                    <CardTitle className="font-serif italic text-lg">User Journeys</CardTitle>
+                    <CardTitle className="text-lg font-semibold">User Journeys</CardTitle>
                     <Badge variant="outline" className="text-[10px]">{journeys.length} sessions</Badge>
                   </CardHeader>
                   <CardContent>
@@ -703,7 +707,7 @@ export default function AdminDashboard() {
                 {/* Daily breakdown table */}
                 <Card className="bg-card/50 backdrop-blur-sm">
                   <CardHeader>
-                    <CardTitle className="font-serif italic text-lg">Daily Breakdown</CardTitle>
+                    <CardTitle className="text-lg font-semibold">Daily Breakdown</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="flex flex-col gap-1.5">
@@ -729,7 +733,7 @@ export default function AdminDashboard() {
             {tab === "sessions" && (
               <Card className="bg-card/50 backdrop-blur-sm">
                 <CardHeader>
-                  <CardTitle className="font-serif italic text-lg">Recent Sessions ({sessions.length})</CardTitle>
+                  <CardTitle className="text-lg font-semibold">Recent Sessions ({sessions.length})</CardTitle>
                 </CardHeader>
                 <CardContent>
                   {sessions.length === 0 ? (
@@ -770,7 +774,7 @@ export default function AdminDashboard() {
                 {/* Firebase Console links */}
                 <Card className="bg-card/50 backdrop-blur-sm border-blue-500/20">
                   <CardHeader>
-                    <CardTitle className="font-serif italic text-lg">Firebase Console</CardTitle>
+                    <CardTitle className="text-lg font-semibold">Firebase Console</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="flex flex-col gap-3">
@@ -802,7 +806,7 @@ export default function AdminDashboard() {
                 {/* Stability overview */}
                 <Card className="bg-card/50 backdrop-blur-sm">
                   <CardHeader>
-                    <CardTitle className="font-serif italic text-lg">Stability</CardTitle>
+                    <CardTitle className="text-lg font-semibold">Stability</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-3 gap-3">
@@ -830,7 +834,7 @@ export default function AdminDashboard() {
                 {errors.length > 0 && (
                   <Card className="bg-card/50 backdrop-blur-sm">
                     <CardHeader>
-                      <CardTitle className="font-serif italic text-lg">Error Types</CardTitle>
+                      <CardTitle className="text-lg font-semibold">Error Types</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="flex flex-col gap-2">
@@ -861,7 +865,7 @@ export default function AdminDashboard() {
                 {/* Error log */}
                 <Card className="bg-card/50 backdrop-blur-sm">
                   <CardHeader className="flex-row items-center justify-between">
-                    <CardTitle className="font-serif italic text-lg">Error Log</CardTitle>
+                    <CardTitle className="text-lg font-semibold">Error Log</CardTitle>
                     <Badge variant={errors.length === 0 ? "secondary" : "destructive"} className="text-[10px]">
                       {errors.length === 0 ? "All clear" : `${errors.length} errors`}
                     </Badge>
@@ -908,7 +912,7 @@ export default function AdminDashboard() {
                 {/* Captcha status */}
                 <Card className="bg-card/50 backdrop-blur-sm">
                   <CardHeader>
-                    <CardTitle className="font-serif italic text-lg">CAPTCHA Protection</CardTitle>
+                    <CardTitle className="text-lg font-semibold">CAPTCHA Protection</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-2 gap-3 mb-4">
@@ -937,7 +941,7 @@ export default function AdminDashboard() {
                 {/* DDoS protection */}
                 <Card className="bg-card/50 backdrop-blur-sm">
                   <CardHeader>
-                    <CardTitle className="font-serif italic text-lg">DDoS Protection</CardTitle>
+                    <CardTitle className="text-lg font-semibold">DDoS Protection</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-2 gap-3 mb-4">
@@ -969,7 +973,7 @@ export default function AdminDashboard() {
                 {serverStats && Object.keys(serverStats.connections_per_ip).length > 0 && (
                   <Card className="bg-card/50 backdrop-blur-sm">
                     <CardHeader>
-                      <CardTitle className="font-serif italic text-lg">Active Connections by IP</CardTitle>
+                      <CardTitle className="text-lg font-semibold">Active Connections by IP</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="flex flex-col gap-1.5">
@@ -995,7 +999,7 @@ export default function AdminDashboard() {
                 {/* Security headers */}
                 <Card className="bg-card/50 backdrop-blur-sm">
                   <CardHeader>
-                    <CardTitle className="font-serif italic text-lg">Security Headers</CardTitle>
+                    <CardTitle className="text-lg font-semibold">Security Headers</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="flex flex-col gap-1.5">
@@ -1025,7 +1029,7 @@ export default function AdminDashboard() {
             {tab === "feedback" && (
               <Card className="bg-card/50 backdrop-blur-sm">
                 <CardHeader className="flex-row items-center justify-between">
-                  <CardTitle className="font-serif italic text-lg">User Feedback ({feedback.length})</CardTitle>
+                  <CardTitle className="text-lg font-semibold">User Feedback ({feedback.length})</CardTitle>
                 </CardHeader>
                 <CardContent>
                   {feedback.length === 0 ? (
@@ -1060,6 +1064,5 @@ export default function AdminDashboard() {
         )}
       </div>
     </main>
-    </AuthGuard>
   );
 }

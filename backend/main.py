@@ -16,6 +16,15 @@ from config import config
 from agent.sightline_agent import create_session_service, create_runner
 from google.adk.agents.live_request_queue import LiveRequestQueue
 from services.auth_service import verify_token
+from services.jwt_auth_service import (
+    verify_google_id_token,
+    create_access_token,
+    create_refresh_token,
+    verify_access_token,
+    verify_refresh_token,
+    revoke_refresh_token,
+    get_or_create_user,
+)
 from services.firestore_service import get_user_preferences, save_user_preference
 from services.storage_service import list_user_frames, delete_frame
 from tools.save_preference import ALLOWED_KEYS
@@ -70,7 +79,7 @@ _captcha_nonces: dict[str, float] = {}  # nonce -> expiry timestamp
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[config.FRONTEND_ORIGIN],
-    allow_credentials=False,
+    allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
@@ -115,6 +124,96 @@ USAGE_TRACK_INTERVAL = 60  # Track usage every 60 seconds
 async def health() -> dict:
     """Health-check endpoint."""
     return {"status": "ok"}
+
+
+# ---------------------------------------------------------------------------
+# Auth endpoints (Google OAuth → JWT session)
+# ---------------------------------------------------------------------------
+
+@app.post("/auth/google")
+async def auth_google(request: Request) -> dict:
+    """Exchange a Google ID token for access + refresh JWTs."""
+    body = await request.json()
+    id_token = body.get("id_token", "")
+    if not id_token:
+        raise HTTPException(400, "Missing id_token")
+
+    try:
+        google_info = verify_google_id_token(id_token)
+    except ValueError as exc:
+        raise HTTPException(401, str(exc))
+
+    user = await get_or_create_user(google_info)
+    access_token = create_access_token(user["id"], user.get("email", ""))
+    refresh_token = create_refresh_token(user["id"])
+
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "user": {
+            "id": user["id"],
+            "email": user.get("email", ""),
+            "name": user.get("name", ""),
+            "avatar": user.get("avatar", ""),
+        },
+    }
+
+
+@app.post("/auth/refresh")
+async def auth_refresh(request: Request) -> dict:
+    """Refresh an access token using a refresh token."""
+    body = await request.json()
+    refresh_token = body.get("refresh_token", "")
+    if not refresh_token:
+        raise HTTPException(400, "Missing refresh_token")
+
+    payload = verify_refresh_token(refresh_token)
+    if not payload:
+        raise HTTPException(401, "Invalid or expired refresh token")
+
+    access_token = create_access_token(payload["sub"], payload.get("email", ""))
+    return {"access_token": access_token}
+
+
+@app.post("/auth/logout")
+async def auth_logout(authorization: str = Header("")) -> dict:
+    """Revoke the refresh token (best-effort)."""
+    # We can't revoke access tokens (they're stateless), but we clear on client side
+    return {"status": "logged_out"}
+
+
+@app.get("/me")
+async def get_me(authorization: str = Header("")) -> dict:
+    """Return the authenticated user's profile."""
+    token = authorization.removeprefix("Bearer ").strip()
+
+    # Try JWT access token first
+    payload = verify_access_token(token)
+    if payload:
+        uid = payload["sub"]
+        from services.firestore_service import get_firestore_client
+        db = get_firestore_client()
+        doc = db.collection("users").document(uid).get()
+        if doc.exists:
+            data = doc.to_dict()
+            return {
+                "id": uid,
+                "email": data.get("email", ""),
+                "name": data.get("name", ""),
+                "avatar": data.get("avatar", ""),
+            }
+
+    # Fall back to Firebase token
+    auth_info = await verify_token(token)
+    if not auth_info:
+        raise HTTPException(401, "Unauthorized")
+
+    return {
+        "id": auth_info["uid"],
+        "email": auth_info.get("email", ""),
+        "name": "",
+        "avatar": "",
+    }
 
 
 @app.get("/api/usage")

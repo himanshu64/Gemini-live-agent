@@ -13,6 +13,8 @@ class Settings(BaseSettings):
 
     # Auth
     API_TOKEN: str = ""
+    GOOGLE_CLIENT_ID: str = ""
+    JWT_SECRET: str = ""  # Set a strong random secret for JWT signing
 
     # Admin emails (comma-separated list)
     ADMIN_EMAILS: str = ""

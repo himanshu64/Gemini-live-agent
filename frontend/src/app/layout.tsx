@@ -1,21 +1,14 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import { Atkinson_Hyperlegible, Instrument_Serif } from "next/font/google";
-import { cn } from "@/lib/utils";
+import { Inter } from "next/font/google";
 import { ToastProvider } from "@/components/ToastProvider";
 import Providers from "@/components/Providers";
+import { cookies } from "next/headers";
+import type { AuthUser } from "@/lib/auth/auth-provider";
 
-const atkinson = Atkinson_Hyperlegible({
+const inter = Inter({
   subsets: ["latin"],
-  weight: ["400", "700"],
   variable: "--font-sans",
-  display: "swap",
-});
-
-const instrumentSerif = Instrument_Serif({
-  subsets: ["latin"],
-  weight: "400",
-  variable: "--font-serif",
   display: "swap",
 });
 
@@ -35,16 +28,23 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: "#0e0f10",
+  themeColor: "#008060",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  let initialUser: AuthUser | null = null;
+  try {
+    const jar = await cookies();
+    const raw = jar.get("sl_user")?.value;
+    if (raw) initialUser = JSON.parse(raw);
+  } catch { /* no session */ }
+
   return (
-    <html lang="en" className={cn(atkinson.variable, instrumentSerif.variable)} suppressHydrationWarning>
+    <html lang="en" className={inter.variable} suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem("theme");var d=t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme:dark)").matches);if(d)document.documentElement.classList.add("dark");else document.documentElement.classList.remove("dark")}catch(e){document.documentElement.classList.add("dark")}})()`,
+            __html: `(function(){try{var t=localStorage.getItem("theme");var d=t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme:dark)").matches);if(d)document.documentElement.classList.add("dark");else document.documentElement.classList.remove("dark")}catch(e){}})()`
           }}
         />
         <link rel="apple-touch-icon" href="/icon-192.png" />
@@ -54,7 +54,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="min-h-dvh font-sans">
         <div className="gradient-blur" aria-hidden="true" />
-        <Providers>
+        <Providers initialUser={initialUser}>
         <ToastProvider>
         {children}
         </ToastProvider>

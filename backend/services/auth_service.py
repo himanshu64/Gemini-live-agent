@@ -1,4 +1,7 @@
-"""Firebase ID token verification for WebSocket authentication."""
+"""Token verification for API authentication.
+
+Accepts: Firebase ID tokens, JWT access tokens, or static API_TOKEN.
+"""
 
 import logging
 import os
@@ -12,13 +15,11 @@ logger = logging.getLogger(__name__)
 
 _http_request = google_requests.Request()
 
-# Firebase project ID may differ from GCP project ID (e.g. includes numeric suffix).
-# Accept FIREBASE_PROJECT_ID env var as an override for the token audience.
 FIREBASE_PROJECT_ID = os.getenv("FIREBASE_PROJECT_ID", "") or config.GOOGLE_CLOUD_PROJECT
 
 
 async def verify_token(token: str) -> dict | None:
-    """Verify a Firebase ID token or fall back to static API_TOKEN.
+    """Verify a token (JWT, Firebase, or static API_TOKEN).
 
     Returns a dict with at least {"uid": str} on success, or None on failure.
     """
@@ -29,7 +30,21 @@ async def verify_token(token: str) -> dict | None:
     if config.API_TOKEN and token == config.API_TOKEN:
         return {"uid": "dev-user", "auth_method": "api_token"}
 
-    # Try Firebase ID token verification with each candidate audience
+    # Try JWT access token first
+    try:
+        from services.jwt_auth_service import verify_access_token
+        payload = verify_access_token(token)
+        if payload:
+            return {
+                "uid": payload["sub"],
+                "email": payload.get("email"),
+                "is_anonymous": False,
+                "auth_method": "jwt",
+            }
+    except Exception:
+        pass
+
+    # Try Firebase ID token verification
     audiences = list(dict.fromkeys([FIREBASE_PROJECT_ID, config.GOOGLE_CLOUD_PROJECT]))
     last_exc: Exception | None = None
 

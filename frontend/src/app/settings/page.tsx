@@ -4,7 +4,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { API_URL } from "@/lib/constants";
 import { speak } from "@/lib/speak";
 import { speechConfig } from "@/lib/speak";
-import AuthGuard from "@/components/AuthGuard";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,7 +36,7 @@ interface Preferences {
 }
 
 export default function SettingsPage() {
-  const { uid, getToken, isAnonymous, signInWithGoogle } = useAuth();
+  const { uid, getToken } = useAuth();
   const [prefs, setPrefs] = useState<Preferences>({});
   const [saving, setSaving] = useState(false);
 
@@ -91,19 +90,13 @@ export default function SettingsPage() {
   const isToggled = (key: keyof Preferences) => prefs[key] === "true";
 
   return (
-    <AuthGuard>
     <main className="flex min-h-dvh flex-col">
       <header className="flex items-center justify-between px-5 py-4">
-        <h1 className="font-serif text-2xl italic text-foreground">Settings</h1>
+        <h1 className="text-xl font-bold text-foreground">Settings</h1>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" className="rounded-full text-xs" render={<Link href="/" />}>
             Back
           </Button>
-          {isAnonymous && (
-            <Button variant="outline" size="sm" className="rounded-full border-foreground/20 text-xs" onClick={signInWithGoogle}>
-              Sign in with Google
-            </Button>
-          )}
         </div>
       </header>
 
@@ -115,7 +108,7 @@ export default function SettingsPage() {
         {/* Speech Rate */}
         <Card className="bg-card/50 backdrop-blur-sm">
           <CardHeader>
-            <CardTitle className="font-serif italic text-lg">Speech Rate</CardTitle>
+            <CardTitle className="text-lg font-semibold">Speech Rate</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-4">
@@ -142,7 +135,7 @@ export default function SettingsPage() {
         {/* Verbosity */}
         <Card className="bg-card/50 backdrop-blur-sm">
           <CardHeader>
-            <CardTitle className="font-serif italic text-lg">Verbosity</CardTitle>
+            <CardTitle className="text-lg font-semibold">Verbosity</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex gap-2" role="radiogroup" aria-label="Verbosity level">
@@ -171,7 +164,7 @@ export default function SettingsPage() {
         {/* Language */}
         <Card className="bg-card/50 backdrop-blur-sm">
           <CardHeader>
-            <CardTitle className="font-serif italic text-lg">Language</CardTitle>
+            <CardTitle className="text-lg font-semibold">Language</CardTitle>
           </CardHeader>
           <CardContent>
             <Select
@@ -197,7 +190,7 @@ export default function SettingsPage() {
         {/* Font Size */}
         <Card className="bg-card/50 backdrop-blur-sm">
           <CardHeader>
-            <CardTitle className="font-serif italic text-lg">Font Size</CardTitle>
+            <CardTitle className="text-lg font-semibold">Font Size</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Font size">
@@ -228,7 +221,7 @@ export default function SettingsPage() {
         {/* Toggles */}
         <Card className="bg-card/50 backdrop-blur-sm">
           <CardHeader>
-            <CardTitle className="font-serif italic text-lg">Accessibility</CardTitle>
+            <CardTitle className="text-lg font-semibold">Accessibility</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-5">
             {[
@@ -256,6 +249,5 @@ export default function SettingsPage() {
         </Card>
       </div>
     </main>
-    </AuthGuard>
   );
 }

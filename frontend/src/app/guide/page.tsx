@@ -75,7 +75,7 @@ export default function GuidePage() {
   return (
     <main className="flex min-h-dvh flex-col">
       <header className="flex items-center justify-between px-5 py-4">
-        <h1 className="font-serif text-2xl italic text-foreground">User Guide</h1>
+        <h1 className="text-xl font-bold text-foreground">User Guide</h1>
         <Button variant="ghost" size="sm" className="rounded-full text-xs" render={<Link href="/" />}>
           Back
         </Button>
@@ -113,7 +113,7 @@ export default function GuidePage() {
         {sections.map((s) => (
           <Card key={s.id} id={s.id} className="bg-card/50 backdrop-blur-sm">
             <CardHeader>
-              <CardTitle className="font-serif italic text-lg">{s.title}</CardTitle>
+              <CardTitle className="text-lg font-semibold">{s.title}</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">{s.content}</p>

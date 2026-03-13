@@ -7,7 +7,6 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress, ProgressLabel, ProgressValue } from "@/components/ui/progress";
-import AuthGuard from "@/components/AuthGuard";
 
 interface FrameData {
   name: string;
@@ -31,7 +30,7 @@ function formatTime(seconds: number): string {
 }
 
 export default function DashboardPage() {
-  const { user, uid, isAnonymous, getToken, signInWithGoogle, handleSignOut } = useAuth();
+  const { user, uid, getToken } = useAuth();
   const [usage, setUsage] = useState<UsageData | null>(null);
   const [error, setError] = useState("");
   const [fetching, setFetching] = useState(false);
@@ -102,7 +101,6 @@ export default function DashboardPage() {
     if (uid) {
       fetchUsage();
       fetchFrames();
-      // Check admin status
       getToken().then((token) =>
         fetch(`${API_URL}/api/admin/check`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -118,28 +116,20 @@ export default function DashboardPage() {
     : 0;
 
   return (
-    <AuthGuard>
     <main className="flex min-h-dvh flex-col">
-      <header className="flex items-center justify-between px-5 py-4">
-        <h1 className="font-serif text-2xl italic text-foreground">Dashboard</h1>
-        <div className="flex items-center gap-2">
-          {isAdmin && (
-            <Button variant="ghost" size="sm" className="rounded-full text-xs" render={<Link href="/admin" aria-label="Admin dashboard" />}>
-              Admin
+      <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-lg border-b border-border">
+        <div className="max-w-6xl mx-auto flex items-center justify-between px-5 py-3">
+          <h1 className="text-xl font-bold text-foreground">Dashboard</h1>
+          <div className="flex items-center gap-2">
+            {isAdmin && (
+              <Button variant="outline" size="sm" className="rounded-lg text-xs border-primary/30 text-primary" render={<Link href="/admin" />}>
+                Admin
+              </Button>
+            )}
+            <Button variant="ghost" size="sm" className="rounded-lg text-sm" render={<Link href="/" />}>
+              Back
             </Button>
-          )}
-          <Button variant="ghost" size="sm" className="rounded-full text-xs" render={<Link href="/" />}>
-            Back
-          </Button>
-          {isAnonymous ? (
-            <Button variant="outline" size="sm" className="rounded-full border-foreground/20 text-xs" onClick={signInWithGoogle}>
-              Sign in with Google
-            </Button>
-          ) : (
-            <Button variant="ghost" size="sm" className="rounded-full text-xs" onClick={handleSignOut}>
-              Sign out
-            </Button>
-          )}
+          </div>
         </div>
       </header>
 
@@ -147,7 +137,7 @@ export default function DashboardPage() {
         {/* Account */}
         <Card className="bg-card/50 backdrop-blur-sm">
           <CardHeader>
-            <CardTitle className="font-serif italic text-lg">Account</CardTitle>
+            <CardTitle className="text-lg font-semibold">Account</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex flex-col gap-3">
@@ -175,7 +165,7 @@ export default function DashboardPage() {
         {/* Usage */}
         <Card className="bg-card/50 backdrop-blur-sm">
           <CardHeader className="flex-row items-center justify-between">
-            <CardTitle className="font-serif italic text-lg">Today&apos;s Usage</CardTitle>
+            <CardTitle className="text-lg font-semibold">Today&apos;s Usage</CardTitle>
             <Button variant="outline" size="sm" className="rounded-full border-foreground/20 text-xs" onClick={fetchUsage} disabled={fetching}>
               {fetching ? "..." : "Refresh"}
             </Button>
@@ -221,7 +211,7 @@ export default function DashboardPage() {
         {/* Plan */}
         <Card className="bg-card/50 backdrop-blur-sm">
           <CardHeader>
-            <CardTitle className="font-serif italic text-lg">Plan Details</CardTitle>
+            <CardTitle className="text-lg font-semibold">Plan Details</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-y-2 text-sm">
@@ -238,7 +228,7 @@ export default function DashboardPage() {
         {/* Captured Frames */}
         <Card className="bg-card/50 backdrop-blur-sm">
           <CardHeader className="flex-row items-center justify-between">
-            <CardTitle className="font-serif italic text-lg">Captured Frames</CardTitle>
+            <CardTitle className="text-lg font-semibold">Captured Frames</CardTitle>
             <Button variant="outline" size="sm" className="rounded-full border-foreground/20 text-xs" onClick={fetchFrames} disabled={framesLoading}>
               {framesLoading ? "..." : "Refresh"}
             </Button>
@@ -289,6 +279,5 @@ export default function DashboardPage() {
         </Card>
       </div>
     </main>
-    </AuthGuard>
   );
 }
