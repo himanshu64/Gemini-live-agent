@@ -3,6 +3,7 @@ import "./globals.css";
 import { Atkinson_Hyperlegible, Instrument_Serif } from "next/font/google";
 import { cn } from "@/lib/utils";
 import { ToastProvider } from "@/components/ToastProvider";
+import Providers from "@/components/Providers";
 
 const atkinson = Atkinson_Hyperlegible({
   subsets: ["latin"],
@@ -53,9 +54,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="min-h-dvh font-sans">
         <div className="gradient-blur" aria-hidden="true" />
+        <Providers>
         <ToastProvider>
         {children}
         </ToastProvider>
+        </Providers>
         <script
           dangerouslySetInnerHTML={{
             __html: `

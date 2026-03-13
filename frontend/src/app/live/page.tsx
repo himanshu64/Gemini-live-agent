@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useSession, signIn } from "next-auth/react";
 import { useAuth } from "@/hooks/useAuth";
 import { useWebSocket, type WSMessage } from "@/hooks/useWebSocket";
 import { useCamera } from "@/hooks/useCamera";
@@ -55,7 +56,8 @@ export default function Home() {
   const isOnline = useOnlineStatus();
   const { containerRef: turnstileRef, verify: verifyCaptcha } = useTurnstile();
 
-  const { uid, isAnonymous, loading: authLoading, authError, getToken, signInWithGoogle } = useAuth();
+  const { data: session, status: sessionStatus } = useSession();
+  const { uid, isAnonymous, loading: authLoading, getToken } = useAuth();
 
   // Keep refs in sync with state
   useEffect(() => { audioMutedRef.current = audioMuted; }, [audioMuted]);
@@ -497,7 +499,7 @@ export default function Home() {
     : "idle" as const;
 
   // --- Loading state ---
-  if (authLoading) {
+  if (sessionStatus === "loading" || authLoading) {
     return (
       <main className="flex min-h-dvh items-center justify-center" aria-busy="true">
         <div className="flex flex-col items-center gap-3">
@@ -508,8 +510,8 @@ export default function Home() {
     );
   }
 
-  // --- Auth gate: require Google sign-in (block anonymous + unauthenticated) ---
-  if (!uid || isAnonymous) {
+  // --- Auth gate: require NextAuth Google sign-in ---
+  if (sessionStatus !== "authenticated") {
     return (
       <main className="flex min-h-dvh flex-col items-center justify-center gap-8 px-6 py-10 text-center">
         <div className="flex flex-col items-center gap-3">
@@ -521,7 +523,7 @@ export default function Home() {
 
         <div className="flex flex-col gap-4 w-full max-w-sm">
           <button
-            onClick={signInWithGoogle}
+            onClick={() => signIn("google")}
             className="w-full rounded-full bg-foreground px-6 py-4 text-base font-semibold text-background transition-all duration-200 hover:opacity-90 flex items-center justify-center gap-3"
             aria-label="Sign in with Google"
           >
@@ -534,12 +536,6 @@ export default function Home() {
             Sign in with Google
           </button>
         </div>
-
-        {authError && (
-          <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400 max-w-sm">
-            {authError}
-          </div>
-        )}
 
         <p className="text-xs text-muted-foreground/60 max-w-xs">
           By signing in, you agree to our{" "}
@@ -623,17 +619,6 @@ export default function Home() {
             )}
           </div>
 
-          {isAnonymous && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="rounded-full border-foreground/20 text-[11px] sm:text-xs px-2 sm:px-2.5 shrink-0"
-              onClick={signInWithGoogle}
-              aria-label="Sign in with Google"
-            >
-              Sign in
-            </Button>
-          )}
           <ConnectionQuality latency={latency} isConnected={connectionState === "connected"} />
           <StatusIndicator
             connectionState={connectionState === "reconnecting" ? "connecting" : connectionState}

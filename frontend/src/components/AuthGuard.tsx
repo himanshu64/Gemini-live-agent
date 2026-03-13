@@ -1,15 +1,15 @@
 "use client";
-import { useAuth } from "@/hooks/useAuth";
+import { useSession, signIn } from "next-auth/react";
 import Link from "next/link";
 
 interface Props {
   children: React.ReactNode;
 }
 
-export default function AuthGuard({ children, allowAnonymous = false }: Props & { allowAnonymous?: boolean }) {
-  const { uid, isAnonymous, loading, authError, signInWithGoogle } = useAuth();
+export default function AuthGuard({ children }: Props) {
+  const { status } = useSession();
 
-  if (loading) {
+  if (status === "loading") {
     return (
       <main className="flex min-h-dvh items-center justify-center" aria-busy="true">
         <div className="flex flex-col items-center gap-3">
@@ -20,7 +20,7 @@ export default function AuthGuard({ children, allowAnonymous = false }: Props & 
     );
   }
 
-  if (!uid || (!allowAnonymous && isAnonymous)) {
+  if (status !== "authenticated") {
     return (
       <main className="flex min-h-dvh flex-col items-center justify-center gap-6 px-6 py-10 text-center">
         <h1 className="font-serif text-3xl sm:text-4xl italic text-foreground">SightLine</h1>
@@ -29,7 +29,7 @@ export default function AuthGuard({ children, allowAnonymous = false }: Props & 
         </p>
         <div className="flex flex-col gap-3 w-full max-w-xs">
           <button
-            onClick={signInWithGoogle}
+            onClick={() => signIn("google")}
             className="w-full rounded-full bg-foreground px-6 py-4 text-base font-semibold text-background transition-all duration-200 hover:opacity-90 flex items-center justify-center gap-3"
             aria-label="Sign in with Google"
           >
@@ -41,11 +41,6 @@ export default function AuthGuard({ children, allowAnonymous = false }: Props & 
             </svg>
             Sign in with Google
           </button>
-          {authError && (
-            <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400 w-full">
-              {authError}
-            </div>
-          )}
           <Link
             href="/"
             className="rounded-full border border-border px-6 py-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
