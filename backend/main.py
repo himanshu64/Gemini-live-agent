@@ -106,12 +106,7 @@ async def _handle_upstream(
             if msg_type == "audio":
                 audio_data = base64.b64decode(message["data"])
                 live_request_queue.send_realtime(
-                    types.LiveSendRealtimeInput(
-                        media=types.MediaChunk(
-                            data=audio_data,
-                            mime_type="audio/pcm",
-                        )
-                    )
+                    types.Blob(data=audio_data, mime_type="audio/pcm")
                 )
 
             elif msg_type == "video":
@@ -126,12 +121,7 @@ async def _handle_upstream(
                     session.state["latest_frame"] = message["data"]
 
                 live_request_queue.send_realtime(
-                    types.LiveSendRealtimeInput(
-                        media=types.MediaChunk(
-                            data=frame_data,
-                            mime_type="image/jpeg",
-                        )
-                    )
+                    types.Blob(data=frame_data, mime_type="image/jpeg")
                 )
 
             elif msg_type == "mode":
