@@ -6,9 +6,6 @@ import { useRouter } from "next/navigation";
 import { API_URL } from "@/lib/constants";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Progress, ProgressValue } from "@/components/ui/progress";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -126,19 +123,19 @@ function relativeTime(iso: string | null): string {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
-const MODE_COLORS: Record<string, string> = {
-  navigation: "bg-blue-500/20 text-blue-400",
-  reading: "bg-emerald-500/20 text-emerald-400",
-  shopping: "bg-amber-500/20 text-amber-400",
-  social: "bg-purple-500/20 text-purple-400",
-  unknown: "bg-muted text-muted-foreground",
+const MODE_COLORS: Record<string, { bg: string; text: string; bar: string }> = {
+  navigation: { bg: "bg-blue-500/10", text: "text-blue-400", bar: "bg-blue-400" },
+  reading: { bg: "bg-emerald-500/10", text: "text-emerald-400", bar: "bg-emerald-400" },
+  shopping: { bg: "bg-amber-500/10", text: "text-amber-400", bar: "bg-amber-400" },
+  social: { bg: "bg-purple-500/10", text: "text-purple-400", bar: "bg-purple-400" },
+  unknown: { bg: "bg-muted", text: "text-muted-foreground", bar: "bg-muted-foreground" },
 };
 
 const STEP_COLORS: Record<string, string> = {
   error: "bg-red-500",
   crash: "bg-red-600",
   mode_change: "bg-purple-500",
-  session_start: "bg-green-500",
+  session_start: "bg-emerald-500",
   session_end: "bg-gray-500",
   default: "bg-foreground/40",
 };
@@ -151,11 +148,15 @@ function stepColor(eventType: string): string {
   return STEP_COLORS.default;
 }
 
+function getModeStyle(mode: string | null) {
+  return MODE_COLORS[mode || "unknown"] || MODE_COLORS.unknown;
+}
+
 // ---------------------------------------------------------------------------
-// Bar chart (pure CSS)
+// Rounded bar chart (Dribbble-style with pill bars)
 // ---------------------------------------------------------------------------
 
-function BarChart({ data, labelKey, valueKey, maxValue, barColor }: {
+function PillBarChart({ data, labelKey, valueKey, maxValue, barColor }: {
   data: UsageTrend[];
   labelKey: keyof UsageTrend;
   valueKey: keyof UsageTrend;
@@ -163,24 +164,49 @@ function BarChart({ data, labelKey, valueKey, maxValue, barColor }: {
   barColor?: string;
 }) {
   return (
-    <div className="flex items-end gap-1.5 h-40">
+    <div className="flex items-end gap-2 h-36">
       {data.map((item, i) => {
         const value = Number(item[valueKey]) || 0;
         const height = maxValue > 0 ? (value / maxValue) * 100 : 0;
         const label = String(item[labelKey]);
         return (
-          <div key={i} className="flex flex-1 flex-col items-center gap-1">
+          <div key={i} className="flex flex-1 flex-col items-center gap-1.5">
             <span className="text-[10px] text-muted-foreground tabular-nums">{Math.round(value)}</span>
-            <div className="w-full flex items-end" style={{ height: "100px" }}>
+            <div className="w-full flex items-end justify-center" style={{ height: "90px" }}>
               <div
-                className={`w-full rounded-t-sm transition-all duration-500 ${barColor || "bg-foreground/80"}`}
-                style={{ height: `${Math.max(height, 2)}%` }}
+                className={`w-3/4 rounded-full transition-all duration-700 ease-out ${barColor || "bg-primary/80"}`}
+                style={{ height: `${Math.max(height, 4)}%` }}
               />
             </div>
             <span className="text-[9px] text-muted-foreground truncate max-w-full">{shortDate(label)}</span>
           </div>
         );
       })}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Horizontal bar (timeline style)
+// ---------------------------------------------------------------------------
+
+function HorizontalBar({ label, value, maxValue, color }: {
+  label: string;
+  value: number;
+  maxValue: number;
+  color: string;
+}) {
+  const pct = maxValue > 0 ? (value / maxValue) * 100 : 0;
+  return (
+    <div className="flex items-center gap-3">
+      <span className="text-xs text-muted-foreground w-20 shrink-0 truncate">{label}</span>
+      <div className="flex-1 h-5 rounded-full bg-muted/40 overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all duration-700 ease-out ${color}`}
+          style={{ width: `${Math.max(pct, 2)}%` }}
+        />
+      </div>
+      <span className="text-xs font-medium tabular-nums text-foreground w-10 text-right shrink-0">{value}</span>
     </div>
   );
 }
@@ -325,12 +351,13 @@ export default function AdminDashboard() {
   if (authorized === false) {
     return (
       <main className="flex min-h-dvh flex-col items-center justify-center gap-4 px-5">
-        <div className="text-center">
-          <h1 className="text-xl font-bold mb-2">Access Denied</h1>
-          <p className="text-sm text-muted-foreground">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-14 w-14 rounded-full bg-destructive/10 flex items-center justify-center">
+            <span className="text-2xl text-destructive">!</span>
+          </div>
+          <h1 className="text-xl font-bold">Access Denied</h1>
+          <p className="text-sm text-muted-foreground text-center max-w-sm">
             You need admin privileges to view this page.
-          </p>
-          <p className="text-xs text-muted-foreground mt-1">
             Set <code className="bg-muted px-1.5 py-0.5 rounded text-xs">role: &quot;admin&quot;</code> on your user document in Firestore.
           </p>
         </div>
@@ -342,14 +369,14 @@ export default function AdminDashboard() {
   }
 
   // --- Tab navigation ---
-  const tabs: { key: Tab; label: string }[] = [
-    { key: "overview", label: "Overview" },
-    { key: "users", label: "Users" },
-    { key: "analytics", label: "Analytics" },
-    { key: "sessions", label: "Sessions" },
-    { key: "crashlytics", label: "Crashlytics" },
-    { key: "security", label: "Security" },
-    { key: "feedback", label: "Feedback" },
+  const tabs: { key: Tab; label: string; icon: string }[] = [
+    { key: "overview", label: "Overview", icon: "\u25C9" },
+    { key: "users", label: "Users", icon: "\u2687" },
+    { key: "analytics", label: "Analytics", icon: "\u2261" },
+    { key: "sessions", label: "Sessions", icon: "\u21C4" },
+    { key: "crashlytics", label: "Crashes", icon: "\u26A0" },
+    { key: "security", label: "Security", icon: "\u2603" },
+    { key: "feedback", label: "Feedback", icon: "\u2709" },
   ];
 
   const maxTrendMinutes = Math.max(...(trends.length ? trends.map((t) => t.total_minutes) : [1]), 1);
@@ -357,58 +384,86 @@ export default function AdminDashboard() {
   const totalModes = Object.values(modes).reduce((a, b) => a + b, 0);
 
   return (
-    <main ref={pageRef} className="flex min-h-dvh flex-col">
-      {/* Header */}
-      <header data-gsap="page-header" className="flex items-center justify-between px-5 py-4">
-        <div className="flex items-center gap-3">
-          <h1 className="text-xl font-bold text-foreground">Admin</h1>
-          <Badge variant="outline" className="text-[10px]">Dashboard</Badge>
+    <main ref={pageRef} className="flex min-h-dvh flex-col bg-background">
+      {/* ── Header ── */}
+      <header data-gsap="page-header" className="sticky top-0 z-40 backdrop-blur-xl bg-background/70 border-b border-border/50">
+        <div className="max-w-7xl mx-auto flex items-center justify-between px-5 py-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/20">
+              <span className="text-sm font-bold text-primary">S</span>
+            </div>
+
+            {/* Pill tab nav */}
+            <nav className="hidden md:flex items-center gap-1 ml-3">
+              {tabs.map((t) => (
+                <button
+                  key={t.key}
+                  onClick={() => setTab(t.key)}
+                  className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-medium transition-all ${
+                    tab === t.key
+                      ? "bg-foreground text-background shadow-sm"
+                      : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                  }`}
+                >
+                  <span className="text-[10px]">{t.icon}</span>
+                  {t.label}
+                </button>
+              ))}
+            </nav>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={loadTabData}
+              disabled={loadingData}
+              className="rounded-full bg-muted/60 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            >
+              {loadingData ? "..." : "Refresh"}
+            </button>
+            <Link href="/dashboard" className="rounded-full bg-muted/60 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+              User
+            </Link>
+            <Link href="/" className="rounded-full bg-muted/60 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+              Home
+            </Link>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" className="rounded-full text-xs" onClick={loadTabData} disabled={loadingData}>
-            {loadingData ? "..." : "Refresh"}
-          </Button>
-          <Button variant="ghost" size="sm" className="rounded-full text-xs" render={<Link href="/dashboard" />}>
-            User
-          </Button>
-          <Button variant="ghost" size="sm" className="rounded-full text-xs" render={<Link href="/" />}>
-            Home
-          </Button>
+
+        {/* Mobile tabs */}
+        <div className="md:hidden flex gap-1 px-5 pb-3 overflow-x-auto" role="tablist">
+          {tabs.map((t) => (
+            <button
+              key={t.key}
+              role="tab"
+              aria-selected={tab === t.key}
+              onClick={() => setTab(t.key)}
+              className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors ${
+                tab === t.key
+                  ? "bg-foreground text-background"
+                  : "bg-muted/50 text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
         </div>
       </header>
 
-      {/* Tabs */}
-      <div className="flex gap-1 px-5 pb-3 overflow-x-auto" role="tablist">
-        {tabs.map((t) => (
-          <button
-            key={t.key}
-            role="tab"
-            aria-selected={tab === t.key}
-            onClick={() => setTab(t.key)}
-            className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors ${
-              tab === t.key
-                ? "bg-foreground text-background"
-                : "bg-muted/50 text-muted-foreground hover:bg-muted"
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Error banner */}
+      {/* ── Error banner ── */}
       {error && (
-        <div className="mx-5 mb-3 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300" role="alert">
-          {error}
+        <div className="max-w-7xl mx-auto w-full px-5 pt-4">
+          <div className="rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive" role="alert">
+            {error}
+          </div>
         </div>
       )}
 
-      {/* Content */}
-      <div data-gsap="page-content" className="flex flex-1 flex-col gap-4 px-5 pb-5">
+      {/* ── Content ── */}
+      <div data-gsap="page-content" className="flex flex-1 flex-col max-w-7xl mx-auto w-full px-5 py-6">
         {loadingData && !stats && !users.length && !trends.length && !serverStats ? (
-          <div className="flex items-center justify-center py-12">
+          <div className="flex items-center justify-center py-20">
             <div className="flex flex-col items-center gap-3">
-              <div className="h-6 w-6 animate-spin rounded-full border-2 border-foreground/20 border-t-foreground" />
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-foreground/20 border-t-primary" />
               <p className="text-xs text-muted-foreground">Loading data...</p>
             </div>
           </div>
@@ -416,652 +471,618 @@ export default function AdminDashboard() {
           <>
             {/* ===================== OVERVIEW TAB ===================== */}
             {tab === "overview" && stats && (
-              <>
-                {/* Stat cards */}
-                <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Stat cards row */}
+                <div className="md:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-3">
                   {[
-                    { value: stats.total_users, label: "Total Users", color: "text-blue-400" },
-                    { value: stats.active_today, label: "Active Today", color: "text-green-400" },
-                    { value: `${stats.total_minutes_today}m`, label: "Usage Today", color: "text-amber-400" },
-                    { value: stats.google_users, label: "Google Users", color: "text-purple-400" },
+                    { value: stats.total_users, label: "Total Users", color: "text-blue-400", bg: "bg-blue-400" },
+                    { value: stats.active_today, label: "Active Today", color: "text-emerald-400", bg: "bg-emerald-400" },
+                    { value: `${stats.total_minutes_today}m`, label: "Usage Today", color: "text-amber-400", bg: "bg-amber-400" },
+                    { value: stats.google_users, label: "Google Users", color: "text-purple-400", bg: "bg-purple-400" },
                   ].map((s) => (
-                    <Card key={s.label} className="bg-card/50 backdrop-blur-sm">
-                      <CardContent className="pt-4">
-                        <p className={`text-2xl font-bold tabular-nums ${s.color}`}>{s.value}</p>
-                        <p className="text-[11px] text-muted-foreground uppercase tracking-wider mt-1">{s.label}</p>
-                      </CardContent>
-                    </Card>
+                    <div key={s.label} className="rounded-2xl bg-card/60 backdrop-blur-sm ring-1 ring-border/50 p-5">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className={`h-2 w-2 rounded-full ${s.bg}`} />
+                        <span className="text-[10px] uppercase tracking-widest text-muted-foreground">{s.label}</span>
+                      </div>
+                      <p className={`text-3xl font-bold tabular-nums ${s.color}`}>{s.value}</p>
+                    </div>
                   ))}
                 </div>
 
-                {/* User breakdown */}
-                <Card className="bg-card/50 backdrop-blur-sm">
-                  <CardHeader>
-                    <CardTitle className="text-lg font-semibold">User Breakdown</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex flex-col gap-3">
-                      {[
-                        { label: "Anonymous", count: stats.anonymous_users },
-                        { label: "Google", count: stats.google_users },
-                      ].map((row) => (
-                        <div key={row.label} className="flex items-center justify-between">
-                          <span className="text-sm text-muted-foreground">{row.label}</span>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium tabular-nums">{row.count}</span>
-                            <Progress value={stats.total_users > 0 ? (row.count / stats.total_users) * 100 : 0} max={100} className="w-24">
-                              <ProgressValue>{() => `${stats.total_users > 0 ? Math.round((row.count / stats.total_users) * 100) : 0}%`}</ProgressValue>
-                            </Progress>
-                          </div>
-                        </div>
-                      ))}
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Admins</span>
-                        <span className="text-sm font-medium tabular-nums">{stats.admin_users}</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                {/* User Breakdown */}
+                <div className="rounded-2xl bg-card/60 backdrop-blur-sm ring-1 ring-border/50 p-5">
+                  <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-5">User Breakdown</h2>
+                  <div className="space-y-3">
+                    {[
+                      { label: "Anonymous", count: stats.anonymous_users, color: "bg-muted-foreground" },
+                      { label: "Google", count: stats.google_users, color: "bg-blue-400" },
+                      { label: "Admins", count: stats.admin_users, color: "bg-amber-400" },
+                    ].map((row) => (
+                      <HorizontalBar
+                        key={row.label}
+                        label={row.label}
+                        value={row.count}
+                        maxValue={stats.total_users}
+                        color={row.color}
+                      />
+                    ))}
+                  </div>
+                  <div className="flex gap-4 mt-4 pt-3 border-t border-border/50">
+                    {[
+                      { label: "Anonymous", color: "bg-muted-foreground" },
+                      { label: "Google", color: "bg-blue-400" },
+                      { label: "Admin", color: "bg-amber-400" },
+                    ].map((l) => (
+                      <span key={l.label} className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                        <span className={`h-2 w-2 rounded-full ${l.color}`} />
+                        {l.label}
+                      </span>
+                    ))}
+                  </div>
+                </div>
 
-                {/* Mode distribution */}
-                {totalModes > 0 && (
-                  <Card className="bg-card/50 backdrop-blur-sm">
-                    <CardHeader>
-                      <CardTitle className="text-lg font-semibold">Mode Distribution</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex flex-col gap-2">
+                {/* Mode Distribution */}
+                <div className="rounded-2xl bg-card/60 backdrop-blur-sm ring-1 ring-border/50 p-5">
+                  <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-5">Mode Distribution</h2>
+                  {totalModes > 0 ? (
+                    <>
+                      <div className="space-y-3">
                         {Object.entries(modes)
                           .sort(([, a], [, b]) => b - a)
-                          .map(([mode, count]) => (
-                            <div key={mode} className="flex items-center gap-3">
-                              <Badge className={`text-[10px] shrink-0 ${MODE_COLORS[mode] || MODE_COLORS.unknown}`}>{mode}</Badge>
-                              <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
-                                <div
-                                  className="h-full rounded-full bg-foreground/60 transition-all duration-500"
-                                  style={{ width: `${(count / totalModes) * 100}%` }}
-                                />
-                              </div>
-                              <span className="text-xs text-muted-foreground tabular-nums shrink-0">
-                                {count} ({Math.round((count / totalModes) * 100)}%)
-                              </span>
-                            </div>
-                          ))}
+                          .map(([mode, count]) => {
+                            const style = getModeStyle(mode);
+                            return (
+                              <HorizontalBar
+                                key={mode}
+                                label={mode}
+                                value={count}
+                                maxValue={totalModes}
+                                color={style.bar}
+                              />
+                            );
+                          })}
                       </div>
-                    </CardContent>
-                  </Card>
-                )}
+                      <p className="text-[10px] text-muted-foreground mt-4 pt-3 border-t border-border/50 tabular-nums">
+                        Total: {totalModes} mode activations
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No mode data yet.</p>
+                  )}
+                </div>
 
-                {/* Platform health */}
-                <Card className="bg-card/50 backdrop-blur-sm">
-                  <CardHeader>
-                    <CardTitle className="text-lg font-semibold">Platform Health</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 gap-y-2 text-sm">
-                      <span className="text-muted-foreground">Avg session today</span>
-                      <span className="text-card-foreground">
+                {/* Platform Health */}
+                <div className="md:col-span-2 rounded-2xl bg-card/60 backdrop-blur-sm ring-1 ring-border/50 p-5">
+                  <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-5">Platform Health</h2>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="rounded-xl bg-muted/30 p-4 text-center">
+                      <p className="text-2xl font-bold text-foreground tabular-nums">
                         {stats.active_today > 0
                           ? formatTime(Math.round(stats.total_seconds_today / stats.active_today))
                           : "N/A"}
-                      </span>
-                      <span className="text-muted-foreground">Conversion rate</span>
-                      <span className="text-card-foreground">
+                      </p>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">Avg Session</p>
+                    </div>
+                    <div className="rounded-xl bg-muted/30 p-4 text-center">
+                      <p className="text-2xl font-bold text-emerald-400 tabular-nums">
                         {stats.total_users > 0
                           ? `${Math.round((stats.google_users / stats.total_users) * 100)}%`
                           : "N/A"}
-                      </span>
-                      <span className="text-muted-foreground">Anon to Google</span>
-                      <span className="text-card-foreground">
-                        {stats.anonymous_users > 0
-                          ? `${stats.google_users} / ${stats.total_users}`
-                          : "N/A"}
-                      </span>
+                      </p>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">Conversion</p>
                     </div>
-                  </CardContent>
-                </Card>
-              </>
+                    <div className="rounded-xl bg-muted/30 p-4 text-center">
+                      <p className="text-2xl font-bold text-blue-400 tabular-nums">
+                        {stats.google_users} / {stats.total_users}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">Google / Total</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             )}
 
             {/* ===================== USERS TAB ===================== */}
             {tab === "users" && (
-              <Card className="bg-card/50 backdrop-blur-sm">
-                <CardHeader className="flex-row items-center justify-between">
-                  <CardTitle className="text-lg font-semibold">All Users ({users.length})</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {users.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No users found.</p>
-                  ) : (
-                    <div className="flex flex-col gap-2 max-h-[70vh] overflow-y-auto -mx-1 px-1">
-                      {users.map((u) => (
-                        <div
-                          key={u.uid}
-                          className={`flex items-center gap-3 rounded-xl border p-3 ${u.disabled ? "border-red-500/20 bg-red-500/5 opacity-60" : "border-border bg-muted/30"}`}
-                        >
-                          <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                            u.disabled ? "bg-red-500/20 text-red-400" : u.role === "admin" ? "bg-amber-500/20 text-amber-400" : u.is_anonymous ? "bg-muted text-muted-foreground" : "bg-blue-500/20 text-blue-400"
-                          }`}>
-                            {u.disabled ? "X" : u.role === "admin" ? "A" : u.is_anonymous ? "?" : u.email?.charAt(0).toUpperCase() || "U"}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <p className={`text-sm font-medium truncate ${u.disabled ? "text-muted-foreground line-through" : "text-card-foreground"}`}>
-                                {u.email || "Anonymous"}
-                              </p>
-                              {u.role === "admin" && <Badge variant="outline" className="text-[9px] h-4">admin</Badge>}
-                              {u.disabled && <Badge variant="destructive" className="text-[9px] h-4">disabled</Badge>}
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <p className="text-[11px] text-muted-foreground font-mono">{u.uid.slice(0, 16)}...</p>
-                              {u.created_at && (
-                                <span className="text-[10px] text-muted-foreground/60">joined {relativeTime(u.created_at)}</span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="text-right shrink-0">
-                            <p className="text-sm font-medium tabular-nums">{u.today_minutes}m</p>
-                            <p className="text-[10px] text-muted-foreground">today</p>
-                          </div>
-                          <Badge variant={u.tier === "free" ? "secondary" : "default"} className="text-[10px] shrink-0">
-                            {u.tier}
-                          </Badge>
-                          {u.role !== "admin" && (
-                            <button
-                              onClick={() => toggleUserDisabled(u.uid, u.disabled)}
-                              disabled={togglingUser === u.uid}
-                              className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-medium transition-colors ${
-                                u.disabled
-                                  ? "bg-green-500/10 text-green-400 hover:bg-green-500/20 border border-green-500/30"
-                                  : "bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/30"
-                              }`}
-                            >
-                              {togglingUser === u.uid ? "..." : u.disabled ? "Enable" : "Disable"}
-                            </button>
-                          )}
+              <div className="rounded-2xl bg-card/60 backdrop-blur-sm ring-1 ring-border/50 p-5">
+                <div className="flex items-center justify-between mb-5">
+                  <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                    All Users <span className="text-foreground ml-1">({users.length})</span>
+                  </h2>
+                </div>
+                {users.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No users found.</p>
+                ) : (
+                  <div className="flex flex-col gap-2 max-h-[70vh] overflow-y-auto">
+                    {users.map((u) => (
+                      <div
+                        key={u.uid}
+                        className={`flex items-center gap-3 rounded-xl p-3 transition-colors ${
+                          u.disabled
+                            ? "bg-destructive/5 ring-1 ring-destructive/20 opacity-60"
+                            : "bg-muted/30 ring-1 ring-border/30 hover:bg-muted/50"
+                        }`}
+                      >
+                        <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                          u.disabled ? "bg-destructive/10 text-destructive" : u.role === "admin" ? "bg-amber-500/10 text-amber-400" : u.is_anonymous ? "bg-muted text-muted-foreground" : "bg-blue-500/10 text-blue-400"
+                        }`}>
+                          {u.disabled ? "X" : u.role === "admin" ? "A" : u.is_anonymous ? "?" : u.email?.charAt(0).toUpperCase() || "U"}
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className={`text-sm font-medium truncate ${u.disabled ? "text-muted-foreground line-through" : "text-foreground"}`}>
+                              {u.email || "Anonymous"}
+                            </p>
+                            {u.role === "admin" && (
+                              <span className="rounded-full bg-amber-500/10 text-amber-400 px-2 py-0.5 text-[9px] font-medium">admin</span>
+                            )}
+                            {u.disabled && (
+                              <span className="rounded-full bg-destructive/10 text-destructive px-2 py-0.5 text-[9px] font-medium">disabled</span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <p className="text-[11px] text-muted-foreground font-mono">{u.uid.slice(0, 16)}...</p>
+                            {u.created_at && (
+                              <span className="text-[10px] text-muted-foreground/60">joined {relativeTime(u.created_at)}</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-sm font-bold tabular-nums text-foreground">{u.today_minutes}m</p>
+                          <p className="text-[10px] text-muted-foreground">today</p>
+                        </div>
+                        <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-medium ${
+                          u.tier === "free" ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary"
+                        }`}>
+                          {u.tier}
+                        </span>
+                        {u.role !== "admin" && (
+                          <button
+                            onClick={() => toggleUserDisabled(u.uid, u.disabled)}
+                            disabled={togglingUser === u.uid}
+                            className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-medium transition-colors ${
+                              u.disabled
+                                ? "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 ring-1 ring-emerald-500/30"
+                                : "bg-destructive/10 text-destructive hover:bg-destructive/20 ring-1 ring-destructive/30"
+                            }`}
+                          >
+                            {togglingUser === u.uid ? "..." : u.disabled ? "Enable" : "Disable"}
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             )}
 
             {/* ===================== ANALYTICS TAB ===================== */}
             {tab === "analytics" && (
-              <>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Usage chart */}
-                <Card className="bg-card/50 backdrop-blur-sm">
-                  <CardHeader>
-                    <CardTitle className="text-lg font-semibold">Usage (minutes/day)</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {trends.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">No usage data yet.</p>
-                    ) : (
-                      <BarChart data={trends} labelKey="date" valueKey="total_minutes" maxValue={maxTrendMinutes} barColor="bg-amber-500/80" />
-                    )}
-                  </CardContent>
-                </Card>
+                <div className="rounded-2xl bg-card/60 backdrop-blur-sm ring-1 ring-border/50 p-5">
+                  <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">Usage (min/day)</h2>
+                  {trends.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No usage data yet.</p>
+                  ) : (
+                    <PillBarChart data={trends} labelKey="date" valueKey="total_minutes" maxValue={maxTrendMinutes} barColor="bg-amber-400/80" />
+                  )}
+                </div>
 
                 {/* Active users chart */}
-                <Card className="bg-card/50 backdrop-blur-sm">
-                  <CardHeader>
-                    <CardTitle className="text-lg font-semibold">Active Users/Day</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {trends.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">No data yet.</p>
-                    ) : (
-                      <BarChart data={trends} labelKey="date" valueKey="active_users" maxValue={maxTrendUsers} barColor="bg-blue-500/80" />
-                    )}
-                  </CardContent>
-                </Card>
+                <div className="rounded-2xl bg-card/60 backdrop-blur-sm ring-1 ring-border/50 p-5">
+                  <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">Active Users/Day</h2>
+                  {trends.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No data yet.</p>
+                  ) : (
+                    <PillBarChart data={trends} labelKey="date" valueKey="active_users" maxValue={maxTrendUsers} barColor="bg-blue-400/80" />
+                  )}
+                </div>
 
                 {/* Retention */}
-                <Card className="bg-card/50 backdrop-blur-sm">
-                  <CardHeader className="flex-row items-center justify-between">
-                    <CardTitle className="text-lg font-semibold">Retention</CardTitle>
-                    <Badge variant="outline" className="text-[10px]">{totalUnique} unique users</Badge>
-                  </CardHeader>
-                  <CardContent>
-                    {retention.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">Not enough data for retention analysis.</p>
-                    ) : (
-                      <div className="flex flex-col gap-1.5">
-                        <div className="grid grid-cols-4 gap-2 text-[10px] uppercase tracking-wider text-muted-foreground pb-1 border-b border-border">
-                          <span>Date</span>
-                          <span className="text-right">Active</span>
-                          <span className="text-right">Return</span>
-                          <span className="text-right">Rate</span>
-                        </div>
-                        {retention.map((r) => (
-                          <div key={r.date} className="grid grid-cols-4 gap-2 text-sm py-1">
-                            <span className="text-muted-foreground">{shortDate(r.date)}</span>
-                            <span className="text-right font-medium tabular-nums">{r.active_users}</span>
-                            <span className="text-right tabular-nums">{r.returning_users}</span>
-                            <span className={`text-right font-medium tabular-nums ${r.retention_rate >= 50 ? "text-green-400" : r.retention_rate >= 20 ? "text-amber-400" : "text-red-400"}`}>
-                              {r.retention_rate}%
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {/* User Journeys */}
-                <Card className="bg-card/50 backdrop-blur-sm">
-                  <CardHeader className="flex-row items-center justify-between">
-                    <CardTitle className="text-lg font-semibold">User Journeys</CardTitle>
-                    <Badge variant="outline" className="text-[10px]">{journeys.length} sessions</Badge>
-                  </CardHeader>
-                  <CardContent>
-                    {journeys.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">No journey data yet. Events are logged during active sessions.</p>
-                    ) : (
-                      <div className="flex flex-col gap-3 max-h-[60vh] overflow-y-auto -mx-1 px-1">
-                        {journeys.map((j) => (
-                          <div
-                            key={j.session_id}
-                            className={`rounded-xl border p-3 ${j.has_errors ? "border-red-500/20 bg-red-500/5" : "border-border bg-muted/30"}`}
-                          >
-                            {/* Journey header */}
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs font-mono text-muted-foreground">{j.session_id.slice(0, 12)}...</span>
-                                {j.current_mode && (
-                                  <Badge className={`text-[9px] h-4 ${MODE_COLORS[j.current_mode] || MODE_COLORS.unknown}`}>{j.current_mode}</Badge>
-                                )}
-                                {j.has_errors && <Badge variant="destructive" className="text-[9px] h-4">errors</Badge>}
-                              </div>
-                              <span className="text-[10px] text-muted-foreground tabular-nums">{j.step_count} steps</span>
-                            </div>
-
-                            {/* Journey timeline */}
-                            {j.steps.length > 0 && (
-                              <div className="flex items-center gap-0.5 overflow-x-auto py-1">
-                                {j.steps.map((step, si) => (
-                                  <div key={si} className="flex items-center gap-0.5 shrink-0" title={`${step.event_type}${step.timestamp ? ` — ${relativeTime(step.timestamp)}` : ""}`}>
-                                    <div className={`h-3 w-3 rounded-full ${stepColor(step.event_type)}`} />
-                                    {si < j.steps.length - 1 && <div className="h-px w-3 bg-border" />}
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-
-                            {/* Step labels */}
-                            {j.steps.length > 0 && j.steps.length <= 8 && (
-                              <div className="flex flex-wrap gap-1 mt-1.5">
-                                {j.steps.map((step, si) => (
-                                  <span key={si} className="text-[9px] text-muted-foreground/60 bg-muted/50 rounded px-1 py-0.5">
-                                    {step.event_type}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {/* Daily breakdown table */}
-                <Card className="bg-card/50 backdrop-blur-sm">
-                  <CardHeader>
-                    <CardTitle className="text-lg font-semibold">Daily Breakdown</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex flex-col gap-1.5">
-                      <div className="grid grid-cols-3 gap-2 text-[10px] uppercase tracking-wider text-muted-foreground pb-1 border-b border-border">
+                <div className="rounded-2xl bg-card/60 backdrop-blur-sm ring-1 ring-border/50 p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Retention</h2>
+                    <span className="rounded-full bg-muted/60 px-2.5 py-0.5 text-[10px] font-medium text-muted-foreground tabular-nums">{totalUnique} unique</span>
+                  </div>
+                  {retention.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Not enough data for retention analysis.</p>
+                  ) : (
+                    <div className="flex flex-col gap-1">
+                      <div className="grid grid-cols-4 gap-2 text-[10px] uppercase tracking-wider text-muted-foreground pb-2 border-b border-border/50">
                         <span>Date</span>
-                        <span className="text-right">Users</span>
-                        <span className="text-right">Minutes</span>
+                        <span className="text-right">Active</span>
+                        <span className="text-right">Return</span>
+                        <span className="text-right">Rate</span>
                       </div>
-                      {trends.map((t) => (
-                        <div key={t.date} className="grid grid-cols-3 gap-2 text-sm py-1">
-                          <span className="text-muted-foreground">{shortDate(t.date)}</span>
-                          <span className="text-right font-medium tabular-nums">{t.active_users}</span>
-                          <span className="text-right font-medium tabular-nums">{t.total_minutes}</span>
+                      {retention.map((r) => (
+                        <div key={r.date} className="grid grid-cols-4 gap-2 text-sm py-1.5">
+                          <span className="text-muted-foreground text-xs">{shortDate(r.date)}</span>
+                          <span className="text-right font-medium tabular-nums text-xs">{r.active_users}</span>
+                          <span className="text-right tabular-nums text-xs">{r.returning_users}</span>
+                          <span className={`text-right font-bold tabular-nums text-xs ${r.retention_rate >= 50 ? "text-emerald-400" : r.retention_rate >= 20 ? "text-amber-400" : "text-red-400"}`}>
+                            {r.retention_rate}%
+                          </span>
                         </div>
                       ))}
                     </div>
-                  </CardContent>
-                </Card>
-              </>
+                  )}
+                </div>
+
+                {/* User Journeys */}
+                <div className="rounded-2xl bg-card/60 backdrop-blur-sm ring-1 ring-border/50 p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">User Journeys</h2>
+                    <span className="rounded-full bg-muted/60 px-2.5 py-0.5 text-[10px] font-medium text-muted-foreground">{journeys.length} sessions</span>
+                  </div>
+                  {journeys.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No journey data yet.</p>
+                  ) : (
+                    <div className="flex flex-col gap-3 max-h-[50vh] overflow-y-auto">
+                      {journeys.map((j) => (
+                        <div
+                          key={j.session_id}
+                          className={`rounded-xl p-3 ${j.has_errors ? "bg-destructive/5 ring-1 ring-destructive/20" : "bg-muted/30 ring-1 ring-border/30"}`}
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] font-mono text-muted-foreground">{j.session_id.slice(0, 12)}...</span>
+                              {j.current_mode && (
+                                <span className={`rounded-full px-2 py-0.5 text-[9px] font-medium ${getModeStyle(j.current_mode).bg} ${getModeStyle(j.current_mode).text}`}>
+                                  {j.current_mode}
+                                </span>
+                              )}
+                              {j.has_errors && (
+                                <span className="rounded-full bg-destructive/10 text-destructive px-2 py-0.5 text-[9px] font-medium">errors</span>
+                              )}
+                            </div>
+                            <span className="text-[10px] text-muted-foreground tabular-nums">{j.step_count} steps</span>
+                          </div>
+
+                          {/* Timeline dots */}
+                          {j.steps.length > 0 && (
+                            <div className="flex items-center gap-0.5 overflow-x-auto py-1">
+                              {j.steps.map((step, si) => (
+                                <div key={si} className="flex items-center gap-0.5 shrink-0" title={`${step.event_type}${step.timestamp ? ` — ${relativeTime(step.timestamp)}` : ""}`}>
+                                  <div className={`h-3 w-3 rounded-full ${stepColor(step.event_type)}`} />
+                                  {si < j.steps.length - 1 && <div className="h-px w-3 bg-border/50" />}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {j.steps.length > 0 && j.steps.length <= 8 && (
+                            <div className="flex flex-wrap gap-1 mt-1.5">
+                              {j.steps.map((step, si) => (
+                                <span key={si} className="text-[9px] text-muted-foreground/60 bg-muted/50 rounded-full px-1.5 py-0.5">
+                                  {step.event_type}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Daily breakdown */}
+                <div className="md:col-span-2 rounded-2xl bg-card/60 backdrop-blur-sm ring-1 ring-border/50 p-5">
+                  <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">Daily Breakdown</h2>
+                  <div className="flex flex-col gap-1">
+                    <div className="grid grid-cols-3 gap-2 text-[10px] uppercase tracking-wider text-muted-foreground pb-2 border-b border-border/50">
+                      <span>Date</span>
+                      <span className="text-right">Users</span>
+                      <span className="text-right">Minutes</span>
+                    </div>
+                    {trends.map((t) => (
+                      <div key={t.date} className="grid grid-cols-3 gap-2 text-sm py-1.5">
+                        <span className="text-muted-foreground text-xs">{shortDate(t.date)}</span>
+                        <span className="text-right font-medium tabular-nums text-xs">{t.active_users}</span>
+                        <span className="text-right font-medium tabular-nums text-xs">{t.total_minutes}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
             )}
 
             {/* ===================== SESSIONS TAB ===================== */}
             {tab === "sessions" && (
-              <Card className="bg-card/50 backdrop-blur-sm">
-                <CardHeader>
-                  <CardTitle className="text-lg font-semibold">Recent Sessions ({sessions.length})</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {sessions.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No sessions found.</p>
-                  ) : (
-                    <div className="flex flex-col gap-2 max-h-[70vh] overflow-y-auto -mx-1 px-1">
-                      {sessions.map((s) => (
-                        <div
-                          key={s.session_id}
-                          className="flex items-center gap-3 rounded-xl border border-border bg-muted/30 p-3"
-                        >
-                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground text-xs">
-                            S
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs font-mono text-card-foreground truncate">{s.session_id.slice(0, 20)}...</p>
-                            <p className="text-[11px] text-muted-foreground">
-                              User: {s.user_id?.slice(0, 12) || "N/A"}...
-                            </p>
-                          </div>
-                          {s.current_mode && (
-                            <Badge className={`text-[10px] shrink-0 ${MODE_COLORS[s.current_mode] || MODE_COLORS.unknown}`}>{s.current_mode}</Badge>
-                          )}
-                          <span className="text-[11px] text-muted-foreground shrink-0">
-                            {relativeTime(s.created_at)}
-                          </span>
+              <div className="rounded-2xl bg-card/60 backdrop-blur-sm ring-1 ring-border/50 p-5">
+                <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-5">
+                  Recent Sessions <span className="text-foreground ml-1">({sessions.length})</span>
+                </h2>
+                {sessions.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No sessions found.</p>
+                ) : (
+                  <div className="flex flex-col gap-2 max-h-[70vh] overflow-y-auto">
+                    {sessions.map((s) => (
+                      <div
+                        key={s.session_id}
+                        className="flex items-center gap-3 rounded-xl bg-muted/30 ring-1 ring-border/30 p-3 hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground text-xs font-bold">
+                          S
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-mono text-foreground truncate">{s.session_id.slice(0, 20)}...</p>
+                          <p className="text-[11px] text-muted-foreground mt-0.5">
+                            User: {s.user_id?.slice(0, 12) || "N/A"}...
+                          </p>
+                        </div>
+                        {s.current_mode && (
+                          <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-medium ${getModeStyle(s.current_mode).bg} ${getModeStyle(s.current_mode).text}`}>
+                            {s.current_mode}
+                          </span>
+                        )}
+                        <span className="text-[11px] text-muted-foreground shrink-0 tabular-nums">
+                          {relativeTime(s.created_at)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             )}
 
             {/* ===================== CRASHLYTICS TAB ===================== */}
             {tab === "crashlytics" && (
-              <>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Firebase Console links */}
-                <Card className="bg-card/50 backdrop-blur-sm border-blue-500/20">
-                  <CardHeader>
-                    <CardTitle className="text-lg font-semibold">Firebase Console</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex flex-col gap-3">
-                      <p className="text-sm text-muted-foreground">
-                        Full Firebase Analytics, Crashlytics &amp; Performance dashboards:
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        {[
-                          { label: "Analytics", path: "analytics", border: "border-blue-500/30", bg: "bg-blue-500/10", text: "text-blue-400", hover: "hover:bg-blue-500/20" },
-                          { label: "Crashlytics", path: "crashlytics", border: "border-red-500/30", bg: "bg-red-500/10", text: "text-red-400", hover: "hover:bg-red-500/20" },
-                          { label: "Performance", path: "performance", border: "border-amber-500/30", bg: "bg-amber-500/10", text: "text-amber-400", hover: "hover:bg-amber-500/20" },
-                          { label: "Cloud Logging", path: "logs", border: "border-green-500/30", bg: "bg-green-500/10", text: "text-green-400", hover: "hover:bg-green-500/20" },
-                        ].map((link) => (
-                          <a
-                            key={link.path}
-                            href={`https://console.firebase.google.com/project/${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "_"}/${link.path}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={`inline-flex items-center gap-1.5 rounded-full border ${link.border} ${link.bg} px-3 py-1.5 text-xs ${link.text} ${link.hover} transition-colors`}
-                          >
-                            {link.label} <span aria-hidden="true">&rarr;</span>
-                          </a>
-                        ))}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                <div className="md:col-span-2 rounded-2xl bg-card/60 backdrop-blur-sm ring-1 ring-blue-500/20 p-5">
+                  <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">Firebase Console</h2>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { label: "Analytics", path: "analytics", color: "bg-blue-400/10 text-blue-400 ring-blue-400/20 hover:bg-blue-400/20" },
+                      { label: "Crashlytics", path: "crashlytics", color: "bg-red-400/10 text-red-400 ring-red-400/20 hover:bg-red-400/20" },
+                      { label: "Performance", path: "performance", color: "bg-amber-400/10 text-amber-400 ring-amber-400/20 hover:bg-amber-400/20" },
+                      { label: "Cloud Logging", path: "logs", color: "bg-emerald-400/10 text-emerald-400 ring-emerald-400/20 hover:bg-emerald-400/20" },
+                    ].map((link) => (
+                      <a
+                        key={link.path}
+                        href={`https://console.firebase.google.com/project/${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "_"}/${link.path}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`inline-flex items-center gap-1.5 rounded-full ring-1 px-3.5 py-1.5 text-xs font-medium transition-colors ${link.color}`}
+                      >
+                        {link.label} <span aria-hidden="true">&rarr;</span>
+                      </a>
+                    ))}
+                  </div>
+                </div>
 
-                {/* Stability overview */}
-                <Card className="bg-card/50 backdrop-blur-sm">
-                  <CardHeader>
-                    <CardTitle className="text-lg font-semibold">Stability</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-3 gap-3">
-                      <div className="rounded-xl border border-border bg-muted/30 p-3 text-center">
-                        <p className={`text-2xl font-bold ${errors.length === 0 ? "text-green-400" : "text-amber-400"}`}>
-                          {sessions.length > 0
-                            ? `${Math.max(0, 100 - Math.round((errors.length / Math.max(sessions.length, 1)) * 100))}%`
-                            : "N/A"}
-                        </p>
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">Crash-free</p>
-                      </div>
-                      <div className="rounded-xl border border-border bg-muted/30 p-3 text-center">
-                        <p className="text-2xl font-bold text-red-400 tabular-nums">{errors.length}</p>
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">Errors</p>
-                      </div>
-                      <div className="rounded-xl border border-border bg-muted/30 p-3 text-center">
-                        <p className="text-2xl font-bold text-blue-400 tabular-nums">{sessions.length}</p>
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">Sessions</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                {/* Stability */}
+                <div className="md:col-span-2 grid grid-cols-3 gap-3">
+                  <div className="rounded-2xl bg-card/60 backdrop-blur-sm ring-1 ring-border/50 p-5 text-center">
+                    <p className={`text-3xl font-bold ${errors.length === 0 ? "text-emerald-400" : "text-amber-400"}`}>
+                      {sessions.length > 0
+                        ? `${Math.max(0, 100 - Math.round((errors.length / Math.max(sessions.length, 1)) * 100))}%`
+                        : "N/A"}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">Crash-free</p>
+                  </div>
+                  <div className="rounded-2xl bg-card/60 backdrop-blur-sm ring-1 ring-border/50 p-5 text-center">
+                    <p className="text-3xl font-bold text-red-400 tabular-nums">{errors.length}</p>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">Errors</p>
+                  </div>
+                  <div className="rounded-2xl bg-card/60 backdrop-blur-sm ring-1 ring-border/50 p-5 text-center">
+                    <p className="text-3xl font-bold text-blue-400 tabular-nums">{sessions.length}</p>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">Sessions</p>
+                  </div>
+                </div>
 
                 {/* Error frequency by type */}
                 {errors.length > 0 && (
-                  <Card className="bg-card/50 backdrop-blur-sm">
-                    <CardHeader>
-                      <CardTitle className="text-lg font-semibold">Error Types</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex flex-col gap-2">
-                        {Object.entries(
-                          errors.reduce<Record<string, number>>((acc, e) => {
-                            acc[e.event_type] = (acc[e.event_type] || 0) + 1;
-                            return acc;
-                          }, {})
-                        )
-                          .sort(([, a], [, b]) => b - a)
-                          .map(([type, count]) => (
-                            <div key={type} className="flex items-center gap-3">
-                              <Badge variant="destructive" className="text-[10px] shrink-0">{type}</Badge>
-                              <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
-                                <div
-                                  className="h-full rounded-full bg-red-500/60 transition-all"
-                                  style={{ width: `${(count / errors.length) * 100}%` }}
-                                />
-                              </div>
-                              <span className="text-xs text-muted-foreground tabular-nums shrink-0">{count}x</span>
-                            </div>
-                          ))}
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <div className="rounded-2xl bg-card/60 backdrop-blur-sm ring-1 ring-border/50 p-5">
+                    <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">Error Types</h2>
+                    <div className="space-y-3">
+                      {Object.entries(
+                        errors.reduce<Record<string, number>>((acc, e) => {
+                          acc[e.event_type] = (acc[e.event_type] || 0) + 1;
+                          return acc;
+                        }, {})
+                      )
+                        .sort(([, a], [, b]) => b - a)
+                        .map(([type, count]) => (
+                          <HorizontalBar
+                            key={type}
+                            label={type}
+                            value={count}
+                            maxValue={errors.length}
+                            color="bg-red-400/80"
+                          />
+                        ))}
+                    </div>
+                  </div>
                 )}
 
                 {/* Error log */}
-                <Card className="bg-card/50 backdrop-blur-sm">
-                  <CardHeader className="flex-row items-center justify-between">
-                    <CardTitle className="text-lg font-semibold">Error Log</CardTitle>
-                    <Badge variant={errors.length === 0 ? "secondary" : "destructive"} className="text-[10px]">
+                <div className={`rounded-2xl bg-card/60 backdrop-blur-sm ring-1 ring-border/50 p-5 ${errors.length > 0 ? "" : "md:col-span-2"}`}>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Error Log</h2>
+                    <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium ${
+                      errors.length === 0 ? "bg-emerald-400/10 text-emerald-400" : "bg-destructive/10 text-destructive"
+                    }`}>
                       {errors.length === 0 ? "All clear" : `${errors.length} errors`}
-                    </Badge>
-                  </CardHeader>
-                  <CardContent>
-                    {errors.length === 0 ? (
-                      <div className="flex flex-col items-center py-8 gap-2">
-                        <div className="h-10 w-10 rounded-full bg-green-500/10 flex items-center justify-center">
-                          <span className="text-green-400 text-lg">&#10003;</span>
-                        </div>
-                        <p className="text-sm text-muted-foreground">No errors detected. All clear!</p>
+                    </span>
+                  </div>
+                  {errors.length === 0 ? (
+                    <div className="flex flex-col items-center py-8 gap-2">
+                      <div className="h-12 w-12 rounded-full bg-emerald-400/10 flex items-center justify-center">
+                        <span className="text-emerald-400 text-lg">&#10003;</span>
                       </div>
-                    ) : (
-                      <div className="flex flex-col gap-2 max-h-[60vh] overflow-y-auto -mx-1 px-1">
-                        {errors.map((e, i) => (
-                          <div
-                            key={`${e.event_id}-${i}`}
-                            className="rounded-xl border border-red-500/20 bg-red-500/5 p-3"
-                          >
-                            <div className="flex items-center justify-between mb-1">
-                              <Badge variant="destructive" className="text-[10px]">{e.event_type}</Badge>
-                              <span className="text-[11px] text-muted-foreground">{relativeTime(e.timestamp)}</span>
-                            </div>
-                            <p className="text-xs font-mono text-muted-foreground truncate">
-                              Session: {e.session_id.slice(0, 24)}...
-                            </p>
-                            {Object.keys(e.data).length > 0 && (
-                              <pre className="mt-2 text-[10px] text-red-300/70 bg-red-500/5 rounded-lg p-2 overflow-x-auto">
-                                {JSON.stringify(e.data, null, 2)}
-                              </pre>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </>
-            )}
-
-            {/* ===================== SECURITY TAB ===================== */}
-            {tab === "security" && (
-              <>
-                {/* Captcha status */}
-                <Card className="bg-card/50 backdrop-blur-sm">
-                  <CardHeader>
-                    <CardTitle className="text-lg font-semibold">CAPTCHA Protection</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 gap-3 mb-4">
-                      <div className="rounded-xl border border-border bg-muted/30 p-3 text-center">
-                        <p className={`text-lg font-bold ${serverStats?.turnstile_enabled ? "text-green-400" : "text-amber-400"}`}>
-                          {serverStats?.turnstile_enabled ? "Active" : "Pass-through"}
-                        </p>
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">Turnstile</p>
-                      </div>
-                      <div className="rounded-xl border border-border bg-muted/30 p-3 text-center">
-                        <p className="text-lg font-bold text-blue-400 tabular-nums">{serverStats?.active_captcha_nonces ?? 0}</p>
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">Active Nonces</p>
-                      </div>
+                      <p className="text-sm text-muted-foreground">No errors detected. All clear!</p>
                     </div>
-                    <div className="grid grid-cols-2 gap-y-2 text-sm">
-                      <span className="text-muted-foreground">Type</span>
-                      <span className="text-card-foreground">Cloudflare Turnstile (Invisible)</span>
-                      <span className="text-muted-foreground">Mode</span>
-                      <span className="text-card-foreground">{serverStats?.turnstile_enabled ? "Enforcing" : "Disabled (nonce pass-through)"}</span>
-                      <span className="text-muted-foreground">Nonce TTL</span>
-                      <span className="text-card-foreground">60 seconds</span>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* DDoS protection */}
-                <Card className="bg-card/50 backdrop-blur-sm">
-                  <CardHeader>
-                    <CardTitle className="text-lg font-semibold">DDoS Protection</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 gap-3 mb-4">
-                      <div className="rounded-xl border border-border bg-muted/30 p-3 text-center">
-                        <p className="text-lg font-bold text-foreground tabular-nums">
-                          {serverStats?.total_connections ?? 0} / {serverStats?.max_connections ?? 50}
-                        </p>
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">WS Connections</p>
-                      </div>
-                      <div className="rounded-xl border border-border bg-muted/30 p-3 text-center">
-                        <p className="text-lg font-bold text-foreground tabular-nums">{serverStats?.rate_limited_ips ?? 0}</p>
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">Tracked IPs</p>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-y-2 text-sm">
-                      <span className="text-muted-foreground">Max per IP</span>
-                      <span className="text-card-foreground">{serverStats?.max_per_ip ?? 3} connections</span>
-                      <span className="text-muted-foreground">Max total</span>
-                      <span className="text-card-foreground">{serverStats?.max_connections ?? 50} connections</span>
-                      <span className="text-muted-foreground">HTTP rate limit</span>
-                      <span className="text-card-foreground">60 req/min per IP</span>
-                      <span className="text-muted-foreground">WS rate limit</span>
-                      <span className="text-card-foreground">30 msg/sec (disconnect at 10 drops)</span>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Active connections by IP */}
-                {serverStats && Object.keys(serverStats.connections_per_ip).length > 0 && (
-                  <Card className="bg-card/50 backdrop-blur-sm">
-                    <CardHeader>
-                      <CardTitle className="text-lg font-semibold">Active Connections by IP</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex flex-col gap-1.5">
-                        <div className="grid grid-cols-2 gap-2 text-[10px] uppercase tracking-wider text-muted-foreground pb-1 border-b border-border">
-                          <span>IP Address</span>
-                          <span className="text-right">Connections</span>
-                        </div>
-                        {Object.entries(serverStats.connections_per_ip)
-                          .sort(([, a], [, b]) => b - a)
-                          .map(([ip, count]) => (
-                            <div key={ip} className="grid grid-cols-2 gap-2 text-sm py-1">
-                              <span className="text-muted-foreground font-mono text-xs">{ip}</span>
-                              <span className={`text-right font-medium tabular-nums ${count >= serverStats.max_per_ip ? "text-red-400" : "text-card-foreground"}`}>
-                                {count} / {serverStats.max_per_ip}
-                              </span>
-                            </div>
-                          ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* Security headers */}
-                <Card className="bg-card/50 backdrop-blur-sm">
-                  <CardHeader>
-                    <CardTitle className="text-lg font-semibold">Security Headers</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex flex-col gap-1.5">
-                      {[
-                        { header: "Content-Security-Policy", status: true },
-                        { header: "X-Content-Type-Options", status: true },
-                        { header: "X-Frame-Options", status: true },
-                        { header: "Strict-Transport-Security", status: true },
-                        { header: "Referrer-Policy", status: true },
-                        { header: "Permissions-Policy", status: true },
-                        { header: "CORS (restricted origin)", status: true },
-                      ].map((h) => (
-                        <div key={h.header} className="flex items-center justify-between py-1">
-                          <span className="text-xs text-muted-foreground font-mono">{h.header}</span>
-                          <span className={`text-[10px] font-medium ${h.status ? "text-green-400" : "text-red-400"}`}>
-                            {h.status ? "Enabled" : "Missing"}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </>
-            )}
-
-            {/* ===================== FEEDBACK TAB ===================== */}
-            {tab === "feedback" && (
-              <Card className="bg-card/50 backdrop-blur-sm">
-                <CardHeader className="flex-row items-center justify-between">
-                  <CardTitle className="text-lg font-semibold">User Feedback ({feedback.length})</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {feedback.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No feedback submitted yet.</p>
                   ) : (
-                    <div className="flex flex-col gap-3 max-h-[70vh] overflow-y-auto -mx-1 px-1">
-                      {feedback.map((f) => (
+                    <div className="flex flex-col gap-2 max-h-[50vh] overflow-y-auto">
+                      {errors.map((e, i) => (
                         <div
-                          key={f.id}
-                          className="rounded-xl border border-border bg-muted/30 p-4"
+                          key={`${e.event_id}-${i}`}
+                          className="rounded-xl bg-destructive/5 ring-1 ring-destructive/20 p-3"
                         >
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium text-foreground">{f.name}</span>
-                              {f.email && (
-                                <span className="text-[11px] text-muted-foreground">{f.email}</span>
-                              )}
-                            </div>
-                            <span className="text-[11px] text-muted-foreground shrink-0">
-                              {f.created_at ? relativeTime(new Date(f.created_at * 1000).toISOString()) : ""}
-                            </span>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="rounded-full bg-destructive/10 text-destructive px-2 py-0.5 text-[10px] font-medium">{e.event_type}</span>
+                            <span className="text-[11px] text-muted-foreground tabular-nums">{relativeTime(e.timestamp)}</span>
                           </div>
-                          <p className="text-sm text-foreground/80 whitespace-pre-wrap leading-relaxed">{f.message}</p>
+                          <p className="text-xs font-mono text-muted-foreground truncate">
+                            Session: {e.session_id.slice(0, 24)}...
+                          </p>
+                          {Object.keys(e.data).length > 0 && (
+                            <pre className="mt-2 text-[10px] text-red-300/70 bg-destructive/5 rounded-lg p-2 overflow-x-auto">
+                              {JSON.stringify(e.data, null, 2)}
+                            </pre>
+                          )}
                         </div>
                       ))}
                     </div>
                   )}
-                </CardContent>
-              </Card>
+                </div>
+              </div>
+            )}
+
+            {/* ===================== SECURITY TAB ===================== */}
+            {tab === "security" && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* CAPTCHA */}
+                <div className="rounded-2xl bg-card/60 backdrop-blur-sm ring-1 ring-border/50 p-5">
+                  <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-5">CAPTCHA Protection</h2>
+                  <div className="grid grid-cols-2 gap-3 mb-4">
+                    <div className="rounded-xl bg-muted/30 p-3 text-center">
+                      <p className={`text-lg font-bold ${serverStats?.turnstile_enabled ? "text-emerald-400" : "text-amber-400"}`}>
+                        {serverStats?.turnstile_enabled ? "Active" : "Pass-through"}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">Turnstile</p>
+                    </div>
+                    <div className="rounded-xl bg-muted/30 p-3 text-center">
+                      <p className="text-lg font-bold text-blue-400 tabular-nums">{serverStats?.active_captcha_nonces ?? 0}</p>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">Active Nonces</p>
+                    </div>
+                  </div>
+                  <div className="space-y-2 text-sm">
+                    {[
+                      { label: "Type", value: "Cloudflare Turnstile (Invisible)" },
+                      { label: "Mode", value: serverStats?.turnstile_enabled ? "Enforcing" : "Disabled (pass-through)" },
+                      { label: "Nonce TTL", value: "60 seconds" },
+                    ].map((r) => (
+                      <div key={r.label} className="flex items-center justify-between py-1">
+                        <span className="text-xs text-muted-foreground">{r.label}</span>
+                        <span className="text-xs text-foreground">{r.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* DDoS */}
+                <div className="rounded-2xl bg-card/60 backdrop-blur-sm ring-1 ring-border/50 p-5">
+                  <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-5">DDoS Protection</h2>
+                  <div className="grid grid-cols-2 gap-3 mb-4">
+                    <div className="rounded-xl bg-muted/30 p-3 text-center">
+                      <p className="text-lg font-bold text-foreground tabular-nums">
+                        {serverStats?.total_connections ?? 0} / {serverStats?.max_connections ?? 50}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">WS Connections</p>
+                    </div>
+                    <div className="rounded-xl bg-muted/30 p-3 text-center">
+                      <p className="text-lg font-bold text-foreground tabular-nums">{serverStats?.rate_limited_ips ?? 0}</p>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">Tracked IPs</p>
+                    </div>
+                  </div>
+                  <div className="space-y-2 text-sm">
+                    {[
+                      { label: "Max per IP", value: `${serverStats?.max_per_ip ?? 3} connections` },
+                      { label: "Max total", value: `${serverStats?.max_connections ?? 50} connections` },
+                      { label: "HTTP rate limit", value: "60 req/min per IP" },
+                      { label: "WS rate limit", value: "30 msg/sec" },
+                    ].map((r) => (
+                      <div key={r.label} className="flex items-center justify-between py-1">
+                        <span className="text-xs text-muted-foreground">{r.label}</span>
+                        <span className="text-xs text-foreground">{r.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Connections by IP */}
+                {serverStats && Object.keys(serverStats.connections_per_ip).length > 0 && (
+                  <div className="rounded-2xl bg-card/60 backdrop-blur-sm ring-1 ring-border/50 p-5">
+                    <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">Connections by IP</h2>
+                    <div className="space-y-2">
+                      {Object.entries(serverStats.connections_per_ip)
+                        .sort(([, a], [, b]) => b - a)
+                        .map(([ip, count]) => (
+                          <div key={ip} className="flex items-center justify-between py-1">
+                            <span className="text-xs text-muted-foreground font-mono">{ip}</span>
+                            <span className={`text-xs font-bold tabular-nums ${count >= serverStats.max_per_ip ? "text-red-400" : "text-foreground"}`}>
+                              {count} / {serverStats.max_per_ip}
+                            </span>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Security headers */}
+                <div className="rounded-2xl bg-card/60 backdrop-blur-sm ring-1 ring-border/50 p-5">
+                  <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">Security Headers</h2>
+                  <div className="space-y-1.5">
+                    {[
+                      "Content-Security-Policy",
+                      "X-Content-Type-Options",
+                      "X-Frame-Options",
+                      "Strict-Transport-Security",
+                      "Referrer-Policy",
+                      "Permissions-Policy",
+                      "CORS (restricted origin)",
+                    ].map((h) => (
+                      <div key={h} className="flex items-center justify-between py-1">
+                        <span className="text-[11px] text-muted-foreground font-mono">{h}</span>
+                        <span className="text-[10px] font-medium text-emerald-400">Enabled</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ===================== FEEDBACK TAB ===================== */}
+            {tab === "feedback" && (
+              <div className="rounded-2xl bg-card/60 backdrop-blur-sm ring-1 ring-border/50 p-5">
+                <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-5">
+                  User Feedback <span className="text-foreground ml-1">({feedback.length})</span>
+                </h2>
+                {feedback.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No feedback submitted yet.</p>
+                ) : (
+                  <div className="flex flex-col gap-3 max-h-[70vh] overflow-y-auto">
+                    {feedback.map((f) => (
+                      <div
+                        key={f.id}
+                        className="rounded-xl bg-muted/30 ring-1 ring-border/30 p-4"
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">
+                              {f.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <span className="text-sm font-medium text-foreground">{f.name}</span>
+                              {f.email && (
+                                <span className="text-[11px] text-muted-foreground ml-2">{f.email}</span>
+                              )}
+                            </div>
+                          </div>
+                          <span className="text-[11px] text-muted-foreground shrink-0 tabular-nums">
+                            {f.created_at ? relativeTime(new Date(f.created_at * 1000).toISOString()) : ""}
+                          </span>
+                        </div>
+                        <p className="text-sm text-foreground/80 whitespace-pre-wrap leading-relaxed pl-9">{f.message}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             )}
           </>
         )}

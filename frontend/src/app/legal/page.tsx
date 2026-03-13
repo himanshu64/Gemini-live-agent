@@ -2,8 +2,6 @@
 import { useState } from "react";
 import { usePageAnimations } from "@/hooks/usePageAnimations";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 type Section = "privacy" | "terms" | "hipaa" | "data-retention" | "soc2" | "accessibility";
 
@@ -23,39 +21,77 @@ export default function LegalPage() {
   ];
 
   return (
-    <main ref={pageRef} className="flex min-h-dvh flex-col">
-      <header data-gsap="page-header" className="flex items-center justify-between px-5 py-4">
-        <h1 className="text-xl font-bold text-foreground">Legal &amp; Policies</h1>
-        <Button variant="ghost" size="sm" className="rounded-full text-xs" render={<Link href="/" />}>
-          Home
-        </Button>
+    <main ref={pageRef} className="flex min-h-dvh flex-col bg-background">
+      {/* ── Header ── */}
+      <header
+        data-gsap="page-header"
+        className="sticky top-0 z-40 backdrop-blur-xl bg-background/70 border-b border-border/50"
+      >
+        <div className="max-w-6xl mx-auto w-full px-5 py-4 flex items-center justify-between">
+          {/* Left: logo + title */}
+          <div className="flex items-center gap-3">
+            <Link
+              href="/"
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/20 text-sm font-bold text-primary"
+            >
+              S
+            </Link>
+            <h1 className="text-base font-semibold text-foreground">Legal &amp; Policies</h1>
+          </div>
+
+          {/* Right: pill nav links */}
+          <nav className="hidden sm:flex items-center gap-1.5">
+            {[
+              { href: "/dashboard", label: "Dashboard" },
+              { href: "/live", label: "Live" },
+              { href: "/", label: "Home" },
+            ].map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="rounded-full px-3.5 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors"
+              >
+                {link.label}
+              </Link>
+            ))}
+          </nav>
+
+          {/* Mobile: single Home link */}
+          <Link
+            href="/"
+            className="sm:hidden rounded-full px-3.5 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors"
+          >
+            Home
+          </Link>
+        </div>
+
+        {/* Section pill tabs */}
+        <div className="max-w-6xl mx-auto w-full px-5 pb-3 flex gap-1.5 overflow-x-auto" role="tablist">
+          {sections.map((s) => (
+            <button
+              key={s.key}
+              role="tab"
+              aria-selected={section === s.key}
+              onClick={() => setSection(s.key)}
+              className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors ${
+                section === s.key
+                  ? "bg-foreground text-background"
+                  : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+              }`}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
       </header>
 
-      {/* Section nav */}
-      <div className="flex gap-1 px-5 pb-3 overflow-x-auto" role="tablist">
-        {sections.map((s) => (
-          <button
-            key={s.key}
-            role="tab"
-            aria-selected={section === s.key}
-            onClick={() => setSection(s.key)}
-            className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors ${
-              section === s.key ? "bg-foreground text-background" : "bg-muted/50 text-muted-foreground hover:bg-muted"
-            }`}
-          >
-            {s.label}
-          </button>
-        ))}
-      </div>
-
-      <div data-gsap="page-content" className="flex flex-1 flex-col gap-4 px-5 pb-5">
+      {/* ── Content ── */}
+      <div data-gsap="page-content" className="max-w-6xl mx-auto w-full px-5 py-6 flex flex-col gap-5">
         {/* ===================== PRIVACY POLICY ===================== */}
         {section === "privacy" && (
-          <Card className="bg-card/50 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold">Privacy Policy</CardTitle>
-            </CardHeader>
-            <CardContent className="prose prose-sm prose-invert max-w-none">
+          <div className="rounded-2xl bg-card/60 backdrop-blur-sm ring-1 ring-border/50 p-5">
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">Privacy Policy</h2>
+            <div className="prose prose-sm prose-invert max-w-none">
               <p className="text-xs text-muted-foreground mb-4">Last updated: {LAST_UPDATED}</p>
 
               <h3 className="text-sm font-semibold text-foreground mt-4 mb-2">1. Information We Collect</h3>
@@ -110,17 +146,15 @@ export default function LegalPage() {
               <p className="text-sm text-muted-foreground">
                 For privacy inquiries, contact: privacy@sightline.app
               </p>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
 
         {/* ===================== TERMS / EULA ===================== */}
         {section === "terms" && (
-          <Card className="bg-card/50 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold">End User License Agreement (EULA)</CardTitle>
-            </CardHeader>
-            <CardContent className="prose prose-sm prose-invert max-w-none">
+          <div className="rounded-2xl bg-card/60 backdrop-blur-sm ring-1 ring-border/50 p-5">
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">End User License Agreement (EULA)</h2>
+            <div className="prose prose-sm prose-invert max-w-none">
               <p className="text-xs text-muted-foreground mb-4">Last updated: {LAST_UPDATED}</p>
 
               <h3 className="text-sm font-semibold text-foreground mt-4 mb-2">1. Acceptance of Terms</h3>
@@ -174,20 +208,18 @@ export default function LegalPage() {
               <p className="text-sm text-muted-foreground">
                 These Terms shall be governed by the laws of the State of California, United States, without regard to its conflict of law provisions.
               </p>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
 
         {/* ===================== HIPAA ===================== */}
         {section === "hipaa" && (
-          <Card className="bg-card/50 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold">HIPAA Compliance Statement</CardTitle>
-            </CardHeader>
-            <CardContent className="prose prose-sm prose-invert max-w-none">
+          <div className="rounded-2xl bg-card/60 backdrop-blur-sm ring-1 ring-border/50 p-5">
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">HIPAA Compliance Statement</h2>
+            <div className="prose prose-sm prose-invert max-w-none">
               <p className="text-xs text-muted-foreground mb-4">Last updated: {LAST_UPDATED}</p>
 
-              <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-300 mb-4">
+              <div className="rounded-2xl border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-sm text-amber-300 mb-4">
                 SightLine is designed as an assistive technology tool and is NOT a medical device. However, we recognize that our users may have disabilities and take data protection seriously.
               </div>
 
@@ -232,17 +264,15 @@ export default function LegalPage() {
               <p className="text-sm text-muted-foreground">
                 Google Cloud Platform is our primary infrastructure provider and offers BAA coverage under their Google Cloud HIPAA Compliance program. If your organization requires a BAA with SightLine, please contact us at compliance@sightline.app.
               </p>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
 
         {/* ===================== DATA RETENTION ===================== */}
         {section === "data-retention" && (
-          <Card className="bg-card/50 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold">Data Retention Policy</CardTitle>
-            </CardHeader>
-            <CardContent className="prose prose-sm prose-invert max-w-none">
+          <div className="rounded-2xl bg-card/60 backdrop-blur-sm ring-1 ring-border/50 p-5">
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">Data Retention Policy</h2>
+            <div className="prose prose-sm prose-invert max-w-none">
               <p className="text-xs text-muted-foreground mb-4">Last updated: {LAST_UPDATED}</p>
 
               <h3 className="text-sm font-semibold text-foreground mt-4 mb-2">Retention Schedule</h3>
@@ -259,7 +289,7 @@ export default function LegalPage() {
                   { data: "Event logs", retention: "30 days", note: "Session events for debugging" },
                   { data: "Conversation transcripts", retention: "Session only", note: "Client-side only, not stored on server" },
                 ].map((row, i) => (
-                  <div key={i} className="rounded-xl border border-border bg-muted/30 p-3">
+                  <div key={i} className="rounded-xl bg-muted/30 ring-1 ring-border/30 p-3">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-sm font-medium text-card-foreground">{row.data}</span>
                       <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
@@ -286,20 +316,18 @@ export default function LegalPage() {
               <p className="text-sm text-muted-foreground">
                 Data subject to a legal hold or regulatory investigation will be retained until the hold is released, overriding the standard retention schedule.
               </p>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
 
         {/* ===================== SOC 2 ===================== */}
         {section === "soc2" && (
-          <Card className="bg-card/50 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold">SOC 2 Compliance</CardTitle>
-            </CardHeader>
-            <CardContent className="prose prose-sm prose-invert max-w-none">
+          <div className="rounded-2xl bg-card/60 backdrop-blur-sm ring-1 ring-border/50 p-5">
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">SOC 2 Compliance</h2>
+            <div className="prose prose-sm prose-invert max-w-none">
               <p className="text-xs text-muted-foreground mb-4">Last updated: {LAST_UPDATED}</p>
 
-              <div className="rounded-xl border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-sm text-blue-300 mb-4">
+              <div className="rounded-2xl border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-sm text-blue-300 mb-4">
                 SightLine is built on Google Cloud Platform, which maintains SOC 1/2/3 certifications. Our application-level controls are designed to align with SOC 2 Trust Service Criteria.
               </div>
 
@@ -315,7 +343,7 @@ export default function LegalPage() {
                   { control: "CC7.2 - Monitoring", status: "Implemented", detail: "Cloud Logging, admin dashboard, error tracking" },
                   { control: "CC7.3 - Incident response", status: "Partial", detail: "Admin user disable, rate limiting auto-response" },
                 ].map((row, i) => (
-                  <div key={i} className="flex items-center justify-between py-1.5 border-b border-border last:border-0">
+                  <div key={i} className="rounded-xl bg-muted/30 ring-1 ring-border/30 flex items-center justify-between p-3">
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium text-card-foreground">{row.control}</p>
                       <p className="text-[10px] text-muted-foreground">{row.detail}</p>
@@ -357,17 +385,15 @@ export default function LegalPage() {
               <p className="text-sm text-muted-foreground">
                 Google Cloud Platform maintains: SOC 1/2/3, ISO 27001/27017/27018, FedRAMP, HIPAA BAA, PCI DSS, and CSA STAR certifications. Full details at cloud.google.com/security/compliance.
               </p>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
 
         {/* ===================== ACCESSIBILITY ===================== */}
         {section === "accessibility" && (
-          <Card className="bg-card/50 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold">Accessibility Statement</CardTitle>
-            </CardHeader>
-            <CardContent className="prose prose-sm prose-invert max-w-none">
+          <div className="rounded-2xl bg-card/60 backdrop-blur-sm ring-1 ring-border/50 p-5">
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">Accessibility Statement</h2>
+            <div className="prose prose-sm prose-invert max-w-none">
               <p className="text-xs text-muted-foreground mb-4">Last updated: {LAST_UPDATED}</p>
 
               <h3 className="text-sm font-semibold text-foreground mt-4 mb-2">Our Commitment</h3>
@@ -401,8 +427,8 @@ export default function LegalPage() {
               <p className="text-sm text-muted-foreground">
                 We welcome accessibility feedback. Please report issues at our GitHub repository or contact accessibility@sightline.app.
               </p>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
       </div>
     </main>

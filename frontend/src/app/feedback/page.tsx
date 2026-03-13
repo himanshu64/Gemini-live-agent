@@ -155,31 +155,33 @@ export default function FeedbackPage() {
   if (submitted) {
     return (
       <main className="flex min-h-dvh flex-col items-center justify-center gap-6 px-6 py-10 text-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-500/10 border border-green-500/30">
-          <span className="text-3xl">&#10003;</span>
-        </div>
-        <h1 className="text-3xl sm:text-4xl font-bold text-foreground">Thank you!</h1>
-        <p className="text-muted-foreground text-sm sm:text-base max-w-sm">
-          Your feedback helps us make SightLine better for everyone.
-        </p>
-        <div className="flex gap-3">
-          <Link
-            href="/"
-            className="rounded-full border border-border px-6 py-3 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Back to Home
-          </Link>
-          <button
-            onClick={() => {
-              setSubmitted(false);
-              setStep(0);
-              setValues({ name: "", email: "", rating: "", feedback: "" });
-              hasSpokenRef.current.clear();
-            }}
-            className="rounded-full bg-foreground px-6 py-3 text-sm font-semibold text-background hover:opacity-90 transition-opacity"
-          >
-            Send Another
-          </button>
+        <div className="rounded-2xl bg-card/60 backdrop-blur-sm ring-1 ring-border/50 p-8 flex flex-col items-center gap-5 max-w-sm w-full">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-500/10 ring-1 ring-green-500/30">
+            <span className="text-3xl">&#10003;</span>
+          </div>
+          <h1 className="text-3xl sm:text-4xl font-bold text-foreground">Thank you!</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">
+            Your feedback helps us make SightLine better for everyone.
+          </p>
+          <div className="flex gap-3 mt-2">
+            <Link
+              href="/"
+              className="rounded-full border border-border/50 px-6 py-3 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Back to Home
+            </Link>
+            <button
+              onClick={() => {
+                setSubmitted(false);
+                setStep(0);
+                setValues({ name: "", email: "", rating: "", feedback: "" });
+                hasSpokenRef.current.clear();
+              }}
+              className="rounded-full bg-foreground px-6 py-3 text-sm font-semibold text-background hover:opacity-90 transition-opacity"
+            >
+              Send Another
+            </button>
+          </div>
         </div>
       </main>
     );
@@ -188,13 +190,18 @@ export default function FeedbackPage() {
   return (
     <main ref={pageRef} className="flex min-h-dvh flex-col">
       {/* Header */}
-      <header data-gsap="page-header" className="flex items-center justify-between px-5 sm:px-8 py-4">
-        <Link href="/" className="text-xl font-bold text-foreground">
-          SightLine
-        </Link>
-        <span className="text-xs text-muted-foreground">
-          Step {step + 1} of {STEPS.length}
-        </span>
+      <header data-gsap="page-header" className="sticky top-0 z-40 backdrop-blur-xl bg-background/70 border-b border-border/50">
+        <div className="flex items-center justify-between px-5 sm:px-8 py-4">
+          <Link href="/" className="flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/20">
+              <span className="text-sm font-bold text-primary">S</span>
+            </div>
+            <span className="text-xl font-bold text-foreground">SightLine</span>
+          </Link>
+          <span className="text-xs font-medium text-muted-foreground rounded-full bg-muted/50 ring-1 ring-border/50 px-3 py-1">
+            Step {step + 1} of {STEPS.length}
+          </span>
+        </div>
       </header>
 
       {/* Progress bar */}
@@ -225,8 +232,8 @@ export default function FeedbackPage() {
                 }}
                 className={`flex h-14 w-14 items-center justify-center rounded-2xl text-2xl transition-all ${
                   values.rating === String(star)
-                    ? "bg-amber-500/20 border-2 border-amber-500/50 scale-110"
-                    : "bg-muted/50 border border-border hover:bg-muted"
+                    ? "bg-amber-500/20 ring-1 ring-amber-500/30 scale-110"
+                    : "bg-muted/50 ring-1 ring-border/50 hover:bg-muted"
                 }`}
                 aria-label={`${star} star${star > 1 ? "s" : ""}`}
               >
@@ -245,7 +252,7 @@ export default function FeedbackPage() {
               onChange={(e) => setValue(e.target.value)}
               placeholder={currentStep.placeholder}
               autoFocus
-              className="w-full rounded-2xl border border-border bg-background px-5 py-4 pr-14 text-base text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-ring"
+              className="w-full rounded-2xl bg-card/60 ring-1 ring-border/50 px-5 py-4 pr-14 text-base text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-ring"
               aria-label={currentStep.question}
               onKeyDown={(e) => e.key === "Enter" && goNext()}
             />
@@ -262,7 +269,7 @@ export default function FeedbackPage() {
               onChange={(e) => setValue(e.target.value)}
               placeholder={currentStep.placeholder}
               autoFocus
-              className="w-full rounded-2xl border border-border bg-background px-5 py-4 pr-14 text-base text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-ring"
+              className="w-full rounded-2xl bg-card/60 ring-1 ring-border/50 px-5 py-4 pr-14 text-base text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-ring"
               aria-label={currentStep.question}
               onKeyDown={(e) => e.key === "Enter" && goNext()}
             />
@@ -279,14 +286,18 @@ export default function FeedbackPage() {
               placeholder={currentStep.placeholder}
               rows={5}
               autoFocus
-              className="w-full rounded-2xl border border-border bg-background px-5 py-4 pr-14 text-base text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+              className="w-full rounded-2xl bg-card/60 ring-1 ring-border/50 px-5 py-4 pr-14 text-base text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-ring resize-none"
               aria-label={currentStep.question}
             />
             <VoiceButton isListening={isListening} onClick={toggleVoice} />
           </div>
         )}
 
-        {error && <p className="text-sm text-red-400">{error}</p>}
+        {error && (
+          <p className="text-sm text-destructive rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-2.5 w-full text-center">
+            {error}
+          </p>
+        )}
 
         {/* Navigation buttons */}
         <div className="flex flex-col gap-3 w-full">
@@ -310,7 +321,7 @@ export default function FeedbackPage() {
           {step > 0 && (
             <button
               onClick={goBack}
-              className="w-full rounded-full border border-border px-6 py-3 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              className="w-full rounded-full border border-border/50 px-6 py-3 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
               Back
             </button>

@@ -68,20 +68,23 @@ export default function LandingPage() {
   return (
     <div className="flex min-h-dvh flex-col bg-background" ref={gsapRef}>
       {/* Nav */}
-      <header data-gsap="nav" className="sticky top-0 z-40 bg-background/80 backdrop-blur-lg border-b border-border">
+      <header data-gsap="nav" className="sticky top-0 z-40 backdrop-blur-xl bg-background/70 border-b border-border/50">
         <div className="max-w-6xl mx-auto flex items-center justify-between px-5 sm:px-8 py-3">
-          <Link href="/" className="text-xl font-bold text-primary tracking-tight">
-            SightLine
-          </Link>
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/20">
+              <span className="text-xs font-bold text-primary">S</span>
+            </div>
+            <Link href="/" className="text-lg font-bold text-primary tracking-tight">SightLine</Link>
+          </div>
           <nav className="flex items-center gap-1.5 sm:gap-2">
-            <Link href="/guide" className="hidden sm:inline-flex rounded-lg px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+            <Link href="/guide" className="hidden sm:inline-flex rounded-full px-3.5 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors">
               Guide
             </Link>
-            <Link href="/feedback" className="hidden sm:inline-flex rounded-lg px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+            <Link href="/feedback" className="hidden sm:inline-flex rounded-full px-3.5 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors">
               Feedback
             </Link>
             {user && (
-              <Link href="/dashboard" className="hidden sm:inline-flex rounded-lg px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+              <Link href="/dashboard" className="hidden sm:inline-flex rounded-full px-3.5 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors">
                 Dashboard
               </Link>
             )}
@@ -89,7 +92,7 @@ export default function LandingPage() {
             <AuthButton />
             <Link
               href={appHref}
-              className="rounded-lg bg-primary px-3 sm:px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+              className="rounded-full bg-primary px-3 sm:px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
             >
               {user ? "Open App" : "Get Started"}
             </Link>

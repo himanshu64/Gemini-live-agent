@@ -3,8 +3,6 @@ import { useCallback } from "react";
 import { usePageAnimations } from "@/hooks/usePageAnimations";
 import { speak, stopSpeaking } from "@/lib/speak";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const sections = [
   {
@@ -75,52 +73,88 @@ export default function GuidePage() {
   }, []);
 
   return (
-    <main ref={pageRef} className="flex min-h-dvh flex-col">
-      <header data-gsap="page-header" className="flex items-center justify-between px-5 py-4">
-        <h1 className="text-xl font-bold text-foreground">User Guide</h1>
-        <Button variant="ghost" size="sm" className="rounded-full text-xs" render={<Link href="/" />}>
-          Back
-        </Button>
+    <main ref={pageRef} className="flex min-h-dvh flex-col bg-background">
+      {/* Header */}
+      <header
+        data-gsap="page-header"
+        className="sticky top-0 z-40 backdrop-blur-xl bg-background/70 border-b border-border/50"
+      >
+        <div className="max-w-6xl mx-auto w-full px-5 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 rounded-full bg-primary/10 ring-1 ring-primary/20 flex items-center justify-center">
+              <span className="text-sm font-bold text-primary">S</span>
+            </div>
+            <h1 className="text-lg font-semibold text-foreground">User Guide</h1>
+          </div>
+          <nav className="flex items-center gap-1.5">
+            <Link
+              href="/live"
+              className="rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-muted"
+            >
+              Live
+            </Link>
+            <Link
+              href="/dashboard"
+              className="rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-muted"
+            >
+              Dashboard
+            </Link>
+            <Link
+              href="/"
+              className="rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-muted"
+            >
+              Home
+            </Link>
+          </nav>
+        </div>
+
+        {/* Section nav + Read Aloud controls */}
+        <div className="max-w-6xl mx-auto w-full px-5 pb-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={readAloud}
+              className="rounded-full bg-foreground px-3 py-1.5 text-xs font-medium text-background transition-all duration-200 hover:opacity-90"
+              aria-label="Read entire guide aloud"
+            >
+              Read Aloud
+            </button>
+            <button
+              onClick={stopSpeaking}
+              className="rounded-full ring-1 ring-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-all duration-200 hover:text-foreground hover:ring-foreground/30"
+              aria-label="Stop reading"
+            >
+              Stop
+            </button>
+            <span className="mx-1 h-4 w-px bg-border/60" aria-hidden="true" />
+            {sections.map((s) => (
+              <a
+                key={s.id}
+                href={`#${s.id}`}
+                className="rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground transition-all duration-200 hover:text-foreground hover:bg-muted"
+              >
+                {s.title}
+              </a>
+            ))}
+          </div>
+        </div>
       </header>
 
-      <nav className="border-b border-border/50 px-5 py-3" aria-label="Guide sections">
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={readAloud}
-            className="rounded-full bg-foreground px-4 py-2 text-xs font-medium text-background transition-all duration-200 hover:opacity-90"
-            aria-label="Read entire guide aloud"
-          >
-            Read Aloud
-          </button>
-          <button
-            onClick={stopSpeaking}
-            className="rounded-full border border-border px-4 py-2 text-xs font-medium text-muted-foreground transition-all duration-200 hover:text-foreground"
-            aria-label="Stop reading"
-          >
-            Stop
-          </button>
-          {sections.map((s) => (
-            <a
-              key={s.id}
-              href={`#${s.id}`}
-              className="rounded-full border border-border px-3 py-2 text-xs text-muted-foreground transition-all duration-200 hover:text-foreground hover:border-foreground/30"
-            >
-              {s.title}
-            </a>
-          ))}
-        </div>
-      </nav>
-
-      <div data-gsap="page-content" className="flex flex-1 flex-col gap-4 px-5 py-4 pb-5">
+      {/* Content */}
+      <div data-gsap="page-content" className="max-w-6xl mx-auto w-full px-5 py-6 flex flex-col gap-4">
         {sections.map((s) => (
-          <Card key={s.id} id={s.id} data-gsap="fade-up" className="bg-card/50 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold">{s.title}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">{s.content}</p>
-            </CardContent>
-          </Card>
+          <section
+            key={s.id}
+            id={s.id}
+            data-gsap="fade-up"
+            className="rounded-2xl bg-card/60 backdrop-blur-sm ring-1 ring-border/50 p-5"
+          >
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">
+              {s.title}
+            </h2>
+            <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-line">
+              {s.content}
+            </p>
+          </section>
         ))}
       </div>
     </main>

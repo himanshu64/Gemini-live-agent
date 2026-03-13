@@ -26,7 +26,7 @@ import CameraControls from "@/components/CameraControls";
 import ConnectionQuality from "@/components/ConnectionQuality";
 import { useToast } from "@/components/ToastProvider";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+
 
 let entryCounter = 0;
 function makeEntry(role: ConversationEntry["role"], text: string): ConversationEntry {
@@ -518,8 +518,14 @@ export default function Home() {
       <OnboardingModal onComplete={() => {}} />
 
       {/* Header — responsive */}
-      <header className="flex items-center justify-between px-4 sm:px-5 py-3 gap-2">
-        <h1 className="text-xl sm:text-2xl font-bold text-primary shrink-0">SightLine</h1>
+      <header className="sticky top-0 z-40 backdrop-blur-xl bg-background/70 border-b border-border/50">
+        <div className="max-w-6xl mx-auto flex items-center justify-between px-4 sm:px-5 py-3 gap-2">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/20">
+            <span className="text-xs font-bold text-primary">S</span>
+          </div>
+          <span className="text-lg font-bold text-primary tracking-tight">SightLine</span>
+        </div>
 
         <div className="flex items-center gap-1 sm:gap-1.5">
           {audioMuted && (
@@ -530,24 +536,24 @@ export default function Home() {
 
           {/* Desktop nav */}
           <nav className="hidden sm:flex items-center gap-1" aria-label="Main navigation">
-            <Button variant="ghost" size="sm" className="rounded-full text-xs px-2.5" render={<Link href="/guide" aria-label="User guide" />}>
+            <Link href="/guide" aria-label="User guide" className="rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors">
               Guide
-            </Button>
-            <Button variant="ghost" size="sm" className="rounded-full text-xs px-2.5" render={<Link href="/settings" aria-label="Settings" />}>
+            </Link>
+            <Link href="/settings" aria-label="Settings" className="rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors">
               Settings
-            </Button>
-            <Button variant="ghost" size="sm" className="rounded-full text-xs px-2.5" render={<Link href="/rewards" aria-label="Rewards" />}>
+            </Link>
+            <Link href="/rewards" aria-label="Rewards" className="rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors">
               Rewards
-            </Button>
-            <Button variant="ghost" size="sm" className="rounded-full text-xs px-2.5" render={<Link href="/dashboard" aria-label="Dashboard" />}>
+            </Link>
+            <Link href="/dashboard" aria-label="Dashboard" className="rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors">
               Dashboard
-            </Button>
-            <Button variant="ghost" size="sm" className="rounded-full text-xs px-2.5" render={<Link href="/legal" aria-label="Legal information" />}>
+            </Link>
+            <Link href="/legal" aria-label="Legal information" className="rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors">
               Legal
-            </Button>
+            </Link>
             <button
               onClick={() => logout()}
-              className="rounded-full px-2.5 py-1.5 text-xs text-red-400 hover:bg-red-500/10 transition-colors"
+              className="rounded-full px-3 py-1.5 text-xs font-medium text-red-400 hover:bg-red-500/10 transition-colors"
             >
               Logout
             </button>
@@ -566,7 +572,7 @@ export default function Home() {
 
             {menuOpen && (
               <nav
-                className="absolute right-0 top-11 z-50 flex flex-col gap-1 rounded-2xl border border-border bg-card p-2 shadow-xl min-w-[140px]"
+                className="absolute right-0 top-11 z-50 flex flex-col gap-1 rounded-2xl border border-border ring-1 ring-border/50 bg-card/95 backdrop-blur-xl p-2 shadow-xl min-w-[140px]"
                 aria-label="Main navigation"
               >
                 {[
@@ -601,6 +607,7 @@ export default function Home() {
             isListening={isListening}
             isSpeaking={isPlaying}
           />
+        </div>
         </div>
       </header>
 
