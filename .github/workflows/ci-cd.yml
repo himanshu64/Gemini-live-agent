@@ -101,6 +101,12 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v3
 
+      - name: Deploy Firestore security rules
+        run: |
+          gcloud firestore databases update --project="$GCP_PROJECT" --type=firestore-native 2>/dev/null || true
+          gcloud firestore deploy --project="$GCP_PROJECT" --rules=firestore.rules --quiet 2>/dev/null || \
+          echo "WARNING: Firestore rules deploy skipped (deploy manually with: firebase deploy --only firestore:rules)"
+
       - name: Authenticate Docker to Artifact Registry
         uses: docker/login-action@v3
         with:
