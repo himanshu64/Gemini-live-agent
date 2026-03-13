@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { usePageAnimations } from "@/hooks/usePageAnimations";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -14,6 +14,11 @@ function LoginForm() {
   const callbackUrl = searchParams.get("callbackUrl") || "/live";
   const urlError = searchParams.get("error");
   const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+  const [origin, setOrigin] = useState("");
+
+  useEffect(() => {
+    setOrigin(window.location.origin);
+  }, []);
 
   useEffect(() => {
     if (user) router.replace(callbackUrl);
@@ -21,8 +26,8 @@ function LoginForm() {
 
   if (user) return null;
 
-  const googleAuthUrl = clientId
-    ? `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(typeof window !== "undefined" ? `${window.location.origin}/api/auth/callback` : "")}&response_type=code&scope=${encodeURIComponent("openid email profile")}&prompt=consent`
+  const googleAuthUrl = clientId && origin
+    ? `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(`${origin}/api/auth/callback`)}&response_type=code&scope=${encodeURIComponent("openid email profile")}&prompt=consent`
     : "";
 
   return (
@@ -64,7 +69,7 @@ function LoginForm() {
             </p>
           )}
 
-          {clientId && !loading && (
+          {googleAuthUrl && !loading && (
             <a
               href={googleAuthUrl}
               className="inline-flex items-center gap-3 rounded-full border border-border bg-white px-6 py-2.5 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50"

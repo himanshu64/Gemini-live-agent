@@ -53,7 +53,7 @@ const HOW_IT_WORKS = [
   { step: "4", title: "Switch Modes", description: "Say 'switch to reading mode' or swipe to change between specialized modes." },
 ];
 
-const TECH_STACK = ["Gemini 2.5 Flash", "Vertex AI", "Google ADK", "Cloud Run", "Firestore", "Cloud Storage", "Firebase Auth"];
+const TECH_STACK = ["Gemini 2.5 Flash", "Vertex AI", "Google ADK", "Cloud Run", "Firestore", "Cloud Storage", "Google OAuth"];
 
 export default function LandingPage() {
   const { user } = useAuthContext();
