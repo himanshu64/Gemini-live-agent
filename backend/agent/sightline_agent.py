@@ -30,7 +30,7 @@ def _build_instruction(ctx) -> str:
 
 sightline_agent = Agent(
     name="sightline_agent",
-    model="gemini-2.5-flash-native-audio-preview",
+    model="gemini-live-2.5-flash-native-audio",
     instruction=_build_instruction,
     tools=[
         save_preference,
