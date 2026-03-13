@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useSyncExternalStore } from "react";
 
 type Theme = "light" | "dark" | "system";
 
@@ -12,16 +12,25 @@ function applyTheme(theme: Theme) {
   document.documentElement.classList.toggle("dark", resolved === "dark");
 }
 
-export default function ThemeToggle() {
-  // Always start with "system" to match server render, then sync from localStorage
-  const [theme, setTheme] = useState<Theme>("system");
-  const [mounted, setMounted] = useState(false);
+// useSyncExternalStore subscribers
+let listeners: Array<() => void> = [];
+function subscribe(cb: () => void) {
+  listeners = [...listeners, cb];
+  return () => { listeners = listeners.filter((l) => l !== cb); };
+}
+function getSnapshot(): Theme {
+  return (localStorage.getItem("theme") as Theme) || "system";
+}
+function getServerSnapshot(): Theme {
+  return "system";
+}
+function setStoredTheme(next: Theme) {
+  localStorage.setItem("theme", next);
+  listeners.forEach((l) => l());
+}
 
-  useEffect(() => {
-    const stored = (localStorage.getItem("theme") as Theme) || "system";
-    setTheme(stored);
-    setMounted(true);
-  }, []);
+export default function ThemeToggle() {
+  const theme = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
   useEffect(() => {
     applyTheme(theme);
@@ -37,29 +46,12 @@ export default function ThemeToggle() {
   }, [theme]);
 
   const cycle = useCallback(() => {
-    setTheme((prev) => {
-      const next: Theme = prev === "light" ? "dark" : prev === "dark" ? "system" : "light";
-      localStorage.setItem("theme", next);
-      return next;
-    });
-  }, []);
+    const next: Theme = theme === "light" ? "dark" : theme === "dark" ? "system" : "light";
+    setStoredTheme(next);
+  }, [theme]);
 
   const label = theme === "light" ? "Light" : theme === "dark" ? "Dark" : "System";
   const icon = theme === "light" ? "☀️" : theme === "dark" ? "🌙" : "💻";
-
-  if (!mounted) {
-    // Render placeholder matching server output to avoid hydration mismatch
-    return (
-      <button
-        className="rounded-full px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5"
-        aria-label="Theme: System. Click to change."
-        title="Theme: System"
-      >
-        <span aria-hidden="true">💻</span>
-        <span className="hidden sm:inline">System</span>
-      </button>
-    );
-  }
 
   return (
     <button
