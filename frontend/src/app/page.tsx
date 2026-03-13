@@ -2,6 +2,7 @@
 import { useCallback } from "react";
 import Link from "next/link";
 import { speak, stopSpeaking } from "@/lib/speak";
+import ThemeToggle from "@/components/ThemeToggle";
 
 const FEATURES = [
   {
@@ -45,6 +46,7 @@ export default function LandingPage() {
       <header className="flex items-center justify-between px-5 sm:px-8 py-4">
         <h1 className="font-serif text-xl sm:text-2xl italic text-foreground">SightLine</h1>
         <div className="flex items-center gap-2">
+          <ThemeToggle />
           <Link
             href="/guide"
             className="rounded-full px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"

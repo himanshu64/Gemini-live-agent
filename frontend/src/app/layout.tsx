@@ -39,8 +39,13 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={cn("dark", atkinson.variable, instrumentSerif.variable)}>
+    <html lang="en" className={cn(atkinson.variable, instrumentSerif.variable)} suppressHydrationWarning>
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem("theme");var d=t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme:dark)").matches);if(d)document.documentElement.classList.add("dark");else document.documentElement.classList.remove("dark")}catch(e){document.documentElement.classList.add("dark")}})()`,
+          }}
+        />
         <link rel="apple-touch-icon" href="/icon-192.png" />
         {process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && (
           <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer />
