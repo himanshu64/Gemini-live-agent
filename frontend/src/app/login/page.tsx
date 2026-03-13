@@ -26,10 +26,12 @@ function LoginForm() {
   const [scriptLoaded, setScriptLoaded] = useState(
     () => typeof document !== "undefined" && !!document.getElementById("gis-script")
   );
+  const [gisReady, setGisReady] = useState(false);
   const btnRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/live";
+  const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
   useEffect(() => {
     if (user) router.replace(callbackUrl);
@@ -57,9 +59,7 @@ function LoginForm() {
   );
 
   useEffect(() => {
-    if (!scriptLoaded || !window.google || !btnRef.current) return;
-    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-    if (!clientId) return;
+    if (!scriptLoaded || !window.google || !btnRef.current || !clientId) return;
 
     window.google.accounts.id.initialize({
       client_id: clientId,
@@ -75,7 +75,9 @@ function LoginForm() {
       text: "signin_with",
       shape: "rectangular",
     });
-  }, [scriptLoaded, handleCredentialResponse]);
+
+    setGisReady(true);
+  }, [scriptLoaded, handleCredentialResponse, clientId]);
 
   if (user) return null;
 
@@ -109,16 +111,23 @@ function LoginForm() {
             </p>
           )}
 
+          {/* Missing client ID error */}
+          {scriptLoaded && !clientId && (
+            <p className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-lg px-4 py-2.5 w-full text-center">
+              Google Sign-In is not configured. Missing NEXT_PUBLIC_GOOGLE_CLIENT_ID.
+            </p>
+          )}
+
           {/* GIS rendered button */}
           <div ref={btnRef} className={loading ? "opacity-50 pointer-events-none" : ""} />
 
-          {/* Fallback: custom Google button shown while GIS loads or if it fails */}
+          {/* Loading skeleton while GIS script loads */}
           {!scriptLoaded && (
             <div className="h-10 w-80 animate-pulse rounded-md bg-muted" />
           )}
 
-          {/* Manual trigger if GIS button doesn't render */}
-          {scriptLoaded && (
+          {/* Fallback Google button — only when GIS is initialized */}
+          {gisReady && (
             <button
               type="button"
               onClick={() => {
