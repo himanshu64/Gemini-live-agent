@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { API_URL } from "@/lib/constants";
 import Link from "next/link";
@@ -31,11 +32,29 @@ function UsageBar({ used, limit }: { used: number; limit: number }) {
 }
 
 export default function DashboardPage() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
+  const router = useRouter();
   const { uid, getToken } = useAuth();
   const [usage, setUsage] = useState<UsageData | null>(null);
   const [error, setError] = useState("");
   const [fetching, setFetching] = useState(false);
+
+  // Redirect to sign-in if not authenticated
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/auth/signin?callbackUrl=/dashboard");
+    }
+  }, [status, router]);
+
+  if (status === "loading") {
+    return (
+      <main className="flex min-h-dvh items-center justify-center" aria-busy="true">
+        <p className="text-xl text-gray-400">Loading...</p>
+      </main>
+    );
+  }
+
+  if (status === "unauthenticated") return null;
 
   const fetchUsage = useCallback(async () => {
     if (!uid) return;
