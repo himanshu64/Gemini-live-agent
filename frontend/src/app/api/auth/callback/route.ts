@@ -20,7 +20,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(url, 303);
   }
 
-  const redirectUri = new URL("/api/auth/callback", request.url).toString();
+  // Normalize 0.0.0.0 to localhost so redirect_uri matches what Google expects
+  const baseUrl = request.url.replace("//0.0.0.0", "//localhost");
+  const redirectUri = new URL("/api/auth/callback", baseUrl).toString();
 
   try {
     // Exchange authorization code for tokens

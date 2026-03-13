@@ -7,7 +7,11 @@ import Link from "next/link";
 import { useAuthContext } from "@/lib/auth/auth-provider";
 
 const subscribe = () => () => {};
-const getOrigin = () => window.location.origin;
+const getOrigin = () => {
+  const o = window.location.origin;
+  // Google OAuth rejects 0.0.0.0 — normalize to localhost
+  return o.replace("//0.0.0.0", "//localhost");
+};
 const getServerOrigin = () => "";
 
 function LoginForm() {
