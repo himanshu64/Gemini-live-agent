@@ -13,6 +13,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from google.genai import types
 
 from config import config
+
+logger = logging.getLogger(__name__)
 from agent.sightline_agent import create_session_service, create_runner
 from google.adk.agents.live_request_queue import LiveRequestQueue
 from services.auth_service import verify_token
@@ -142,9 +144,18 @@ async def auth_google(request: Request) -> dict:
     except ValueError as exc:
         raise HTTPException(401, str(exc))
 
-    user = await get_or_create_user(google_info)
-    access_token = create_access_token(user["id"], user.get("email", ""))
-    refresh_token = create_refresh_token(user["id"])
+    try:
+        user = await get_or_create_user(google_info)
+    except Exception as exc:
+        logger.exception("Failed to get/create user in Firestore")
+        raise HTTPException(500, f"User creation failed: {exc}")
+
+    try:
+        access_token = create_access_token(user["id"], user.get("email", ""))
+        refresh_token = create_refresh_token(user["id"])
+    except Exception as exc:
+        logger.exception("Failed to create JWT tokens")
+        raise HTTPException(500, f"Token creation failed: {exc}")
 
     return {
         "access_token": access_token,
