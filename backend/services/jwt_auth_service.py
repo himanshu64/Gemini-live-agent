@@ -121,12 +121,12 @@ def revoke_refresh_token(token: str) -> None:
 
 async def get_or_create_user(google_info: dict) -> dict:
     """Find or create user in Firestore. Returns user dict."""
-    from services.firestore_service import get_firestore_client
+    from services.firestore_service import get_client
 
-    db = get_firestore_client()
+    db = get_client()
     user_id = google_info["sub"]
     user_ref = db.collection("users").document(user_id)
-    doc = user_ref.get()
+    doc = await user_ref.get()
 
     if doc.exists:
         data = doc.to_dict()
@@ -139,7 +139,7 @@ async def get_or_create_user(google_info: dict) -> dict:
         if data.get("avatar") != google_info["picture"]:
             updates["avatar"] = google_info["picture"]
         if updates:
-            user_ref.update(updates)
+            await user_ref.update(updates)
             data.update(updates)
         return {"id": user_id, **data}
 
@@ -153,5 +153,5 @@ async def get_or_create_user(google_info: dict) -> dict:
         "is_anonymous": False,
         "created_at": now,
     }
-    user_ref.set(user_data)
+    await user_ref.set(user_data)
     return {"id": user_id, **user_data}
