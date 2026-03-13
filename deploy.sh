@@ -68,7 +68,7 @@ gcloud run deploy sightline-backend --quiet \
   --region="$REGION" \
   --platform=managed \
   --allow-unauthenticated \
-  --set-env-vars="GOOGLE_CLOUD_PROJECT=$PROJECT_ID,GOOGLE_CLOUD_LOCATION=$REGION,GCS_BUCKET=$BUCKET_NAME,API_TOKEN=$API_TOKEN" \
+  --set-env-vars="GOOGLE_CLOUD_PROJECT=$PROJECT_ID,GOOGLE_CLOUD_LOCATION=$REGION,GCS_BUCKET=$BUCKET_NAME,API_TOKEN=$API_TOKEN,GOOGLE_GENAI_USE_VERTEXAI=TRUE" \
   --min-instances=0 \
   --max-instances=4 \
   --concurrency=20 \
