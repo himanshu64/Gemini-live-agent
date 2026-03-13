@@ -40,6 +40,7 @@ gcloud services enable \
   storage.googleapis.com \
   cloudbuild.googleapis.com \
   artifactregistry.googleapis.com \
+  identitytoolkit.googleapis.com \
   --project="$PROJECT_ID" --quiet
 
 # Deploy Firestore security rules
