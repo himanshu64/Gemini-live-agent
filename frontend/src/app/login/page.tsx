@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuthContext } from "@/lib/auth/auth-provider";
@@ -19,7 +19,7 @@ declare global {
   }
 }
 
-export default function LoginPage() {
+function LoginForm() {
   const { user, login, loading, error } = useAuthContext();
   const [scriptLoaded, setScriptLoaded] = useState(
     () => typeof document !== "undefined" && !!document.getElementById("gis-script")
@@ -151,5 +151,17 @@ export default function LoginPage() {
         </Link>
       </div>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <main className="flex min-h-dvh items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary/20 border-t-primary" />
+      </main>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }

@@ -129,18 +129,133 @@ export default function LandingPage() {
       {/* Preview Cards */}
       <section className="px-5 sm:px-8 py-8 sm:py-12">
         <div className="max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {[
-            { label: "Real-time camera feed with AI descriptions", gradient: "from-primary/10 to-primary/5" },
-            { label: "4 specialized modes for every situation", gradient: "from-chart-5/10 to-chart-5/5" },
-            { label: "Voice-first — no screen needed", gradient: "from-primary/8 to-transparent" },
-          ].map((item, i) => (
-            <div
-              key={i}
-              className={`aspect-[9/16] sm:aspect-[3/4] rounded-xl border border-border bg-gradient-to-b ${item.gradient} flex items-end p-5 shadow-sm`}
-            >
-              <p className="text-sm text-foreground/80 font-medium leading-snug">{item.label}</p>
+          {/* Card 1: Real-time Camera AI */}
+          <div className="group relative aspect-[9/16] sm:aspect-[3/4] rounded-xl border border-border bg-gradient-to-b from-primary/10 to-primary/5 flex flex-col items-center justify-between p-5 shadow-sm overflow-hidden transition-all hover:shadow-lg hover:border-primary/30">
+            <div className="flex-1 flex items-center justify-center w-full">
+              <svg viewBox="0 0 200 280" fill="none" className="w-40 sm:w-44 drop-shadow-lg transition-transform group-hover:scale-105">
+                {/* Phone frame */}
+                <rect x="30" y="10" width="140" height="260" rx="20" fill="#e5e7eb" stroke="#d1d5db" strokeWidth="2" />
+                <rect x="38" y="30" width="124" height="220" rx="4" fill="white" />
+                {/* Camera notch */}
+                <rect x="80" y="14" width="40" height="8" rx="4" fill="#d1d5db" />
+                {/* Camera viewfinder scene */}
+                <rect x="38" y="30" width="124" height="220" rx="4" fill="#008060" fillOpacity="0.08" />
+                {/* Crosshair */}
+                <circle cx="100" cy="120" r="30" stroke="#008060" strokeWidth="2" strokeDasharray="6 4" opacity="0.6" />
+                <line x1="100" y1="85" x2="100" y2="95" stroke="#008060" strokeWidth="2" opacity="0.6" />
+                <line x1="100" y1="145" x2="100" y2="155" stroke="#008060" strokeWidth="2" opacity="0.6" />
+                <line x1="65" y1="120" x2="75" y2="120" stroke="#008060" strokeWidth="2" opacity="0.6" />
+                <line x1="125" y1="120" x2="135" y2="120" stroke="#008060" strokeWidth="2" opacity="0.6" />
+                {/* Scene elements */}
+                <rect x="55" y="90" width="20" height="40" rx="2" fill="#008060" fillOpacity="0.15" stroke="#008060" strokeWidth="1" opacity="0.5" />
+                <circle cx="130" cy="95" r="12" fill="#008060" fillOpacity="0.12" stroke="#008060" strokeWidth="1" opacity="0.5" />
+                <rect x="70" y="150" width="60" height="8" rx="4" fill="#008060" fillOpacity="0.2" />
+                {/* AI description bubble */}
+                <rect x="48" y="175" width="104" height="50" rx="10" fill="#008060" fillOpacity="0.9" />
+                <text x="100" y="195" textAnchor="middle" fill="white" fontSize="9" fontWeight="600">Person ahead, 10ft</text>
+                <text x="100" y="210" textAnchor="middle" fill="white" fontSize="8" opacity="0.8">Crosswalk at 12 o&apos;clock</text>
+                <polygon points="70,225 80,225 75,232" fill="#008060" fillOpacity="0.9" />
+                {/* REC indicator */}
+                <circle cx="52" cy="42" r="4" fill="#EF4444" />
+                <text x="62" y="45" fill="#EF4444" fontSize="8" fontWeight="700">LIVE</text>
+              </svg>
             </div>
-          ))}
+            <p className="text-sm text-foreground/80 font-medium leading-snug text-center">Real-time camera feed with AI descriptions</p>
+          </div>
+
+          {/* Card 2: 4 Specialized Modes */}
+          <div className="group relative aspect-[9/16] sm:aspect-[3/4] rounded-xl border border-border bg-gradient-to-b from-[#008060]/8 to-[#008060]/3 flex flex-col items-center justify-between p-5 shadow-sm overflow-hidden transition-all hover:shadow-lg hover:border-primary/30">
+            <div className="flex-1 flex items-center justify-center w-full">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                {/* Navigation */}
+                <div className="flex flex-col items-center gap-2 rounded-xl bg-primary/10 border border-primary/20 p-4 sm:p-5 transition-transform group-hover:scale-105">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/20 flex items-center justify-center">
+                    <svg className="w-5 h-5 sm:w-6 sm:h-6 text-primary" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 0 1 7.843 4.582M12 3a8.997 8.997 0 0 0-7.843 4.582" />
+                    </svg>
+                  </div>
+                  <span className="text-[10px] sm:text-xs font-semibold text-primary">Navigate</span>
+                </div>
+                {/* Reading */}
+                <div className="flex flex-col items-center gap-2 rounded-xl bg-blue-500/10 border border-blue-500/20 p-4 sm:p-5 transition-transform group-hover:scale-105">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-blue-500/20 flex items-center justify-center">
+                    <svg className="w-5 h-5 sm:w-6 sm:h-6 text-blue-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+                    </svg>
+                  </div>
+                  <span className="text-[10px] sm:text-xs font-semibold text-blue-500">Read</span>
+                </div>
+                {/* Shopping */}
+                <div className="flex flex-col items-center gap-2 rounded-xl bg-amber-500/10 border border-amber-500/20 p-4 sm:p-5 transition-transform group-hover:scale-105">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-amber-500/20 flex items-center justify-center">
+                    <svg className="w-5 h-5 sm:w-6 sm:h-6 text-amber-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" />
+                    </svg>
+                  </div>
+                  <span className="text-[10px] sm:text-xs font-semibold text-amber-500">Shop</span>
+                </div>
+                {/* Social */}
+                <div className="flex flex-col items-center gap-2 rounded-xl bg-purple-500/10 border border-purple-500/20 p-4 sm:p-5 transition-transform group-hover:scale-105">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-purple-500/20 flex items-center justify-center">
+                    <svg className="w-5 h-5 sm:w-6 sm:h-6 text-purple-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" />
+                    </svg>
+                  </div>
+                  <span className="text-[10px] sm:text-xs font-semibold text-purple-500">Social</span>
+                </div>
+              </div>
+            </div>
+            <p className="text-sm text-foreground/80 font-medium leading-snug text-center">4 specialized modes for every situation</p>
+          </div>
+
+          {/* Card 3: Voice-first */}
+          <div className="group relative aspect-[9/16] sm:aspect-[3/4] rounded-xl border border-border bg-gradient-to-b from-primary/8 to-transparent flex flex-col items-center justify-between p-5 shadow-sm overflow-hidden transition-all hover:shadow-lg hover:border-primary/30">
+            <div className="flex-1 flex items-center justify-center w-full">
+              <svg viewBox="0 0 200 240" fill="none" className="w-40 sm:w-44 transition-transform group-hover:scale-105">
+                {/* Central mic icon */}
+                <circle cx="100" cy="110" r="50" fill="#008060" fillOpacity="0.08" stroke="#008060" strokeWidth="1.5" strokeDasharray="4 3" />
+                <circle cx="100" cy="110" r="35" fill="#008060" fillOpacity="0.12" />
+                <rect x="92" y="88" width="16" height="28" rx="8" fill="#008060" />
+                <path d="M84 108v4a16 16 0 0 0 32 0v-4" stroke="#008060" strokeWidth="2.5" strokeLinecap="round" />
+                <line x1="100" y1="128" x2="100" y2="136" stroke="#008060" strokeWidth="2.5" strokeLinecap="round" />
+                <line x1="92" y1="136" x2="108" y2="136" stroke="#008060" strokeWidth="2.5" strokeLinecap="round" />
+
+                {/* Sound waves */}
+                <path d="M60 110c0-22 18-40 40-40" stroke="#008060" strokeWidth="2" strokeLinecap="round" opacity="0.3">
+                  <animate attributeName="opacity" values="0.1;0.4;0.1" dur="2s" repeatCount="indefinite" />
+                </path>
+                <path d="M48 110c0-29 23-52 52-52" stroke="#008060" strokeWidth="1.5" strokeLinecap="round" opacity="0.2">
+                  <animate attributeName="opacity" values="0.05;0.3;0.05" dur="2s" begin="0.3s" repeatCount="indefinite" />
+                </path>
+                <path d="M140 110c0-22-18-40-40-40" stroke="#008060" strokeWidth="2" strokeLinecap="round" opacity="0.3">
+                  <animate attributeName="opacity" values="0.1;0.4;0.1" dur="2s" repeatCount="indefinite" />
+                </path>
+                <path d="M152 110c0-29-23-52-52-52" stroke="#008060" strokeWidth="1.5" strokeLinecap="round" opacity="0.2">
+                  <animate attributeName="opacity" values="0.05;0.3;0.05" dur="2s" begin="0.3s" repeatCount="indefinite" />
+                </path>
+
+                {/* Speech bubbles */}
+                <rect x="20" y="160" width="70" height="28" rx="8" fill="#008060" fillOpacity="0.15" />
+                <text x="55" y="178" textAnchor="middle" fill="#008060" fontSize="9" fontWeight="500">&quot;What&apos;s ahead?&quot;</text>
+
+                <rect x="110" y="160" width="75" height="28" rx="8" fill="#008060" fillOpacity="0.9" />
+                <text x="147" y="178" textAnchor="middle" fill="white" fontSize="9" fontWeight="500">&quot;Crosswalk, 20ft&quot;</text>
+
+                {/* Audio waveform bars */}
+                <rect x="30" y="202" width="6" height="16" rx="3" fill="#008060" fillOpacity="0.15" />
+                <rect x="45" y="196" width="6" height="28" rx="3" fill="#008060" fillOpacity="0.18" />
+                <rect x="60" y="190" width="6" height="40" rx="3" fill="#008060" fillOpacity="0.21" />
+                <rect x="75" y="198" width="6" height="24" rx="3" fill="#008060" fillOpacity="0.24" />
+                <rect x="90" y="186" width="6" height="48" rx="3" fill="#008060" fillOpacity="0.27" />
+                <rect x="105" y="192" width="6" height="36" rx="3" fill="#008060" fillOpacity="0.30" />
+                <rect x="120" y="200" width="6" height="20" rx="3" fill="#008060" fillOpacity="0.33" />
+                <rect x="135" y="188" width="6" height="44" rx="3" fill="#008060" fillOpacity="0.36" />
+                <rect x="150" y="194" width="6" height="32" rx="3" fill="#008060" fillOpacity="0.39" />
+                <rect x="165" y="202" width="6" height="16" rx="3" fill="#008060" fillOpacity="0.42" />
+              </svg>
+            </div>
+            <p className="text-sm text-foreground/80 font-medium leading-snug text-center">Voice-first — no screen needed</p>
+          </div>
         </div>
       </section>
 
