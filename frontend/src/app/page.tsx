@@ -43,6 +43,7 @@ export default function Home() {
   const [audioMuted, setAudioMuted] = useState(false);
   const [sosActive, setSosActive] = useState(false);
   const isSpeakingRef = useRef(false);
+  const [activeStream, setActiveStream] = useState<MediaStream | null>(null);
   const hasAnnouncedRef = useRef(false);
   const audioMutedRef = useRef(false);
   const videoDisabledRef = useRef(false);
@@ -179,6 +180,11 @@ export default function Home() {
     flip: flipCamera, facing: cameraFacing, torchSupported, torchOn, toggleTorch,
   } = useCamera(handleVideoFrame, { lowPower: lowPowerMode });
   const { isActive: micActive, start: startMic, stop: stopMic } = useMicrophone(handleAudioChunk);
+
+  // Sync streamRef into state so we can safely pass it during render
+  useEffect(() => {
+    setActiveStream(streamRef.current);
+  }, [cameraActive, streamRef]);
 
   // --- Quick action: send text as user speech ---
   const handleQuickAction = useCallback(
@@ -513,7 +519,7 @@ export default function Home() {
         {/* Camera Preview — prominent, inline */}
         {isRunning && (
           <CameraPreview
-            stream={streamRef.current}
+            stream={activeStream}
             visible={showPreview}
             videoDisabled={videoDisabled}
           />

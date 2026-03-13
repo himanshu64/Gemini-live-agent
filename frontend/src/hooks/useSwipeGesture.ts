@@ -22,7 +22,9 @@ export function useSwipeGesture<T extends HTMLElement>(callbacks: SwipeCallbacks
   const startTime = useRef(0);
 
   const cbRef = useRef(callbacks);
-  cbRef.current = callbacks;
+  useEffect(() => {
+    cbRef.current = callbacks;
+  }, [callbacks]);
 
   const onTouchStart = useCallback((e: TouchEvent) => {
     const touch = e.touches[0];

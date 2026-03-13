@@ -41,13 +41,13 @@ export default function OnboardingModal({ onComplete }: Props) {
   const [step, setStep] = useState(0);
 
   useEffect(() => {
+    let shouldShow = false;
     try {
-      if (!localStorage.getItem(ONBOARDING_KEY)) {
-        setShow(true);
-      }
+      shouldShow = !localStorage.getItem(ONBOARDING_KEY);
     } catch {
       // localStorage unavailable
     }
+    if (shouldShow) setShow(true);
   }, []);
 
   useEffect(() => {

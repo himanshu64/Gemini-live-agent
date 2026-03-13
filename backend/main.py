@@ -634,7 +634,7 @@ async def _handle_downstream(
                         )
     except WebSocketDisconnect:
         logger.info("Client %s disconnected (downstream)", session_id)
-    except Exception as exc:
+    except Exception:
         logger.exception("Downstream error for session %s", session_id)
         try:
             await ws.send_json({
@@ -751,7 +751,7 @@ async def _handle_ws_session(ws: WebSocket, token: str, captcha_nonce: str, clie
                 "user_id": uid,
             },
         )
-    except Exception as exc:
+    except Exception:
         logger.exception("Failed to create session %s", session_id)
         await ws.send_json({
             "type": "error",

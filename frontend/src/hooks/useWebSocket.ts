@@ -44,6 +44,7 @@ export function useWebSocket({
   const wasConnectedRef = useRef(false);
   const pingTimestampRef = useRef(0);
   const [latency, setLatency] = useState(-1);
+  const scheduleReconnectRef = useRef<() => void>(() => {});
 
   useEffect(() => { onMessageRef.current = onMessage; }, [onMessage]);
   useEffect(() => { onReconnectingRef.current = onReconnecting; }, [onReconnecting]);
@@ -136,7 +137,7 @@ export function useWebSocket({
 
         // Auto-reconnect if not intentionally closed
         if (!intentionalCloseRef.current && autoReconnect && wasConnectedRef.current) {
-          scheduleReconnect();
+          scheduleReconnectRef.current();
         } else {
           setConnectionState("disconnected");
         }
@@ -175,6 +176,11 @@ export function useWebSocket({
       }
     }, jitter);
   }, [connectInternal, clearReconnectTimer]);
+
+  // Keep the ref in sync so connectInternal's onclose can call it
+  useEffect(() => {
+    scheduleReconnectRef.current = scheduleReconnect;
+  }, [scheduleReconnect]);
 
   const connect = useCallback(async () => {
     intentionalCloseRef.current = false;
