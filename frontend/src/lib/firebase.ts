@@ -3,8 +3,11 @@ import {
   getAuth,
   signInAnonymously as fbSignInAnon,
   signInWithPopup,
+  signInWithRedirect,
   GoogleAuthProvider,
   linkWithPopup,
+  linkWithRedirect,
+  getRedirectResult,
   signOut as fbSignOut,
   type Auth,
   type User,
@@ -48,16 +51,37 @@ export async function linkWithGoogle(): Promise<User> {
   const user = a.currentUser;
   if (!user) throw new Error("No current user");
   const provider = new GoogleAuthProvider();
-  const cred = await linkWithPopup(user, provider);
-  return cred.user;
+  try {
+    const cred = await linkWithPopup(user, provider);
+    return cred.user;
+  } catch {
+    // Popup blocked or COOP issue — fall back to redirect
+    await linkWithRedirect(user, provider);
+    // Won't reach here — page redirects
+    return user;
+  }
 }
 
 /** Direct Google sign-in (when no anonymous user exists) */
 export async function googleSignIn(): Promise<User> {
   const a = getFirebaseAuth();
   const provider = new GoogleAuthProvider();
-  const cred = await signInWithPopup(a, provider);
-  return cred.user;
+  try {
+    const cred = await signInWithPopup(a, provider);
+    return cred.user;
+  } catch {
+    // Popup blocked or COOP issue — fall back to redirect
+    await signInWithRedirect(a, provider);
+    // Won't reach here — page redirects
+    return null as unknown as User;
+  }
+}
+
+/** Check for redirect result on page load */
+export async function handleRedirectResult(): Promise<User | null> {
+  const a = getFirebaseAuth();
+  const result = await getRedirectResult(a);
+  return result?.user ?? null;
 }
 
 /** Get a fresh ID token for backend auth */

@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { onAuthStateChanged, type User } from "firebase/auth";
-import { auth, signInAnonymously, linkWithGoogle, googleSignIn, signOut, getIdToken } from "@/lib/firebase";
+import { auth, signInAnonymously, linkWithGoogle, googleSignIn, signOut, getIdToken, handleRedirectResult } from "@/lib/firebase";
 
 interface AuthState {
   user: User | null;
@@ -18,6 +18,9 @@ export function useAuth(): AuthState {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Handle redirect result from Google sign-in (if returning from redirect flow)
+    handleRedirectResult().catch(() => {});
+
     const unsub = onAuthStateChanged(auth, async (u) => {
       if (u) {
         setUser(u);
