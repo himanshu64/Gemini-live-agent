@@ -39,6 +39,8 @@ function getFirebaseAuth(): Auth {
 /** Lazy-initialized auth — only accessed at runtime in the browser */
 export const auth = typeof window !== "undefined" ? getFirebaseAuth() : (null as unknown as Auth);
 
+const provider = new GoogleAuthProvider();
+
 /** Sign in anonymously — instant, no UI required */
 export async function signInAnonymously(): Promise<User> {
   const cred = await fbSignInAnon(getFirebaseAuth());
@@ -50,30 +52,32 @@ export async function linkWithGoogle(): Promise<User> {
   const a = getFirebaseAuth();
   const user = a.currentUser;
   if (!user) throw new Error("No current user");
-  const provider = new GoogleAuthProvider();
   try {
     const cred = await linkWithPopup(user, provider);
     return cred.user;
-  } catch {
-    // Popup blocked or COOP issue — fall back to redirect
-    await linkWithRedirect(user, provider);
-    // Won't reach here — page redirects
-    return user;
+  } catch (err) {
+    const code = (err as { code?: string })?.code;
+    if (code === "auth/popup-blocked" || code === "auth/popup-closed-by-user") {
+      await linkWithRedirect(user, provider);
+      return user;
+    }
+    throw err;
   }
 }
 
-/** Direct Google sign-in (when no anonymous user exists) */
+/** Direct Google sign-in */
 export async function googleSignIn(): Promise<User> {
   const a = getFirebaseAuth();
-  const provider = new GoogleAuthProvider();
   try {
     const cred = await signInWithPopup(a, provider);
     return cred.user;
-  } catch {
-    // Popup blocked or COOP issue — fall back to redirect
-    await signInWithRedirect(a, provider);
-    // Won't reach here — page redirects
-    return null as unknown as User;
+  } catch (err) {
+    const code = (err as { code?: string })?.code;
+    if (code === "auth/popup-blocked" || code === "auth/popup-closed-by-user") {
+      await signInWithRedirect(a, provider);
+      return null as unknown as User;
+    }
+    throw err;
   }
 }
 

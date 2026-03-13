@@ -8,6 +8,7 @@ interface AuthState {
   uid: string | null;
   isAnonymous: boolean;
   loading: boolean;
+  authError: string | null;
   getToken: () => Promise<string>;
   signInWithGoogle: () => Promise<void>;
   handleSignOut: () => Promise<void>;
@@ -16,6 +17,7 @@ interface AuthState {
 export function useAuth(): AuthState {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
     // Handle redirect result from Google sign-in (if returning from redirect flow)
@@ -42,24 +44,29 @@ export function useAuth(): AuthState {
   }, []);
 
   const signInWithGoogle = useCallback(async () => {
+    setAuthError(null);
     try {
       if (user?.isAnonymous) {
         await linkWithGoogle();
       } else {
-        // No user or already authenticated — do direct Google sign-in
         await googleSignIn();
       }
     } catch (err: unknown) {
-      // If linking fails (e.g. credential already in use), fall back to direct sign-in
-      if (err instanceof Error && "code" in err && (err as { code: string }).code === "auth/credential-already-in-use") {
+      const code = (err as { code?: string })?.code;
+      if (code === "auth/credential-already-in-use") {
         try {
           await signOut();
           await googleSignIn();
         } catch (innerErr) {
           console.error("[Auth] Fallback Google sign-in failed:", innerErr);
+          setAuthError("Sign-in failed. Please try again.");
         }
+      } else if (code === "auth/unauthorized-domain") {
+        setAuthError("This domain is not authorized for sign-in. Please contact the administrator.");
+        console.error("[Auth] Add this domain to Firebase Console → Authentication → Settings → Authorized domains");
       } else {
         console.error("[Auth] Google sign-in failed:", err);
+        setAuthError("Sign-in failed. Please try again.");
       }
     }
   }, [user]);
@@ -73,6 +80,7 @@ export function useAuth(): AuthState {
     uid: user?.uid || null,
     isAnonymous: user?.isAnonymous ?? true,
     loading,
+    authError,
     getToken,
     signInWithGoogle,
     handleSignOut,

@@ -7,7 +7,7 @@ interface Props {
 }
 
 export default function AuthGuard({ children, allowAnonymous = false }: Props & { allowAnonymous?: boolean }) {
-  const { uid, isAnonymous, loading, signInWithGoogle } = useAuth();
+  const { uid, isAnonymous, loading, authError, signInWithGoogle } = useAuth();
 
   if (loading) {
     return (
@@ -41,6 +41,11 @@ export default function AuthGuard({ children, allowAnonymous = false }: Props & 
             </svg>
             Sign in with Google
           </button>
+          {authError && (
+            <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400 w-full">
+              {authError}
+            </div>
+          )}
           <Link
             href="/"
             className="rounded-full border border-border px-6 py-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"

@@ -55,7 +55,7 @@ export default function Home() {
   const isOnline = useOnlineStatus();
   const { containerRef: turnstileRef, verify: verifyCaptcha } = useTurnstile();
 
-  const { uid, isAnonymous, loading: authLoading, getToken, signInWithGoogle } = useAuth();
+  const { uid, isAnonymous, loading: authLoading, authError, getToken, signInWithGoogle } = useAuth();
 
   // Keep refs in sync with state
   useEffect(() => { audioMutedRef.current = audioMuted; }, [audioMuted]);
@@ -534,6 +534,12 @@ export default function Home() {
             Sign in with Google
           </button>
         </div>
+
+        {authError && (
+          <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400 max-w-sm">
+            {authError}
+          </div>
+        )}
 
         <p className="text-xs text-muted-foreground/60 max-w-xs">
           By signing in, you agree to our{" "}
