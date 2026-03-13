@@ -508,8 +508,8 @@ export default function Home() {
     );
   }
 
-  // --- Auth gate: show sign-in screen if no authenticated user ---
-  if (!uid) {
+  // --- Auth gate: require Google sign-in (block anonymous + unauthenticated) ---
+  if (!uid || isAnonymous) {
     return (
       <main className="flex min-h-dvh flex-col items-center justify-center gap-8 px-6 py-10 text-center">
         <div className="flex flex-col items-center gap-3">
