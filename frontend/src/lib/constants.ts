@@ -1,4 +1,5 @@
 export const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000/ws";
+export const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 export const API_TOKEN = process.env.NEXT_PUBLIC_API_TOKEN || "";
 export const SAMPLE_RATE_IN = 16000;   // mic input
 export const SAMPLE_RATE_OUT = 24000;  // audio playback

@@ -39,5 +39,7 @@ USER nextjs
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
+# NextAuth runtime vars — set via Cloud Run env vars or --set-env-vars
+# NEXTAUTH_SECRET, NEXTAUTH_URL, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
 
 CMD ["node", "server.js"]

@@ -45,3 +45,4 @@ coverage/
 # Project-specific
 .claude/
 ARCHITECTURE.md
+PRODUCTION_ARCHITECTURE.md

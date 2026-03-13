@@ -9,6 +9,7 @@ import { speak, stopSpeaking } from "@/lib/speak";
 import StatusIndicator from "@/components/StatusIndicator";
 import ModeSelector from "@/components/ModeSelector";
 import EmergencyButton from "@/components/EmergencyButton";
+import Link from "next/link";
 import type { Mode } from "@/lib/constants";
 
 export default function Home() {
@@ -182,6 +183,13 @@ export default function Home() {
       <header className="flex items-center justify-between border-b border-gray-800 px-4 py-3">
         <h1 className="text-2xl font-bold text-white">SightLine</h1>
         <div className="flex items-center gap-2">
+          <Link
+            href="/dashboard"
+            className="rounded-lg bg-gray-800 px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 min-h-[44px] min-w-[44px] flex items-center"
+            aria-label="View usage dashboard"
+          >
+            Dashboard
+          </Link>
           {isAnonymous && (
             <button
               onClick={signInWithGoogle}

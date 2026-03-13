@@ -7,7 +7,7 @@ import logging
 import time
 from uuid import uuid4
 
-from fastapi import FastAPI, Query, Request, Response, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Header, HTTPException, Query, Request, Response, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from google.genai import types
 
@@ -18,6 +18,8 @@ from services.auth_service import verify_token
 from services.usage_service import (
     check_limit,
     ensure_user_doc,
+    get_daily_usage,
+    get_user_tier,
     increment_usage,
     FREE_TIER_SECONDS,
 )
@@ -60,6 +62,29 @@ USAGE_TRACK_INTERVAL = 60  # Track usage every 60 seconds
 async def health() -> dict:
     """Health-check endpoint."""
     return {"status": "ok"}
+
+
+@app.get("/api/usage")
+async def get_usage(authorization: str = Header("")) -> dict:
+    """Return usage stats for the authenticated user."""
+    token = authorization.removeprefix("Bearer ").strip()
+    auth_info = await verify_token(token)
+    if not auth_info:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    uid = auth_info["uid"]
+    tier = await get_user_tier(uid)
+    used = await get_daily_usage(uid)
+    limit = FREE_TIER_SECONDS if tier == "free" else -1
+    remaining = max(0, limit - used) if limit > 0 else -1
+
+    return {
+        "uid": uid,
+        "tier": tier,
+        "today_seconds_used": used,
+        "today_seconds_limit": limit,
+        "today_seconds_remaining": remaining,
+    }
 
 
 async def _handle_keepalive(ws: WebSocket, session_id: str) -> None:
