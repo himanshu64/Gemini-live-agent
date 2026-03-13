@@ -583,6 +583,13 @@ async def _handle_upstream(
                     types.Blob(data=frame_data, mime_type="image/jpeg")
                 )
 
+            elif msg_type == "text":
+                text = message.get("text", "").strip()
+                if text:
+                    live_request_queue.send_content(
+                        types.Content(role="user", parts=[types.Part(text=text)])
+                    )
+
             elif msg_type == "emergency":
                 # Handle SOS emergency
                 location = message.get("location")

@@ -16,6 +16,7 @@ from tools.switch_mode import switch_mode
 from tools.capture_frame import capture_frame
 from tools.get_session_history import get_session_history
 from tools.emergency_alert import emergency_alert
+from tools.generate_story import generate_story
 
 
 def _build_instruction(ctx) -> str:
@@ -38,6 +39,7 @@ sightline_agent = Agent(
         capture_frame,
         get_session_history,
         emergency_alert,
+        generate_story,
     ],
     generate_content_config=GenerateContentConfig(
         response_modalities=["AUDIO"],

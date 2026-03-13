@@ -5,6 +5,7 @@ import { WS_URL, API_TOKEN, RECONNECT_BASE_DELAY, RECONNECT_MAX_DELAY } from "@/
 export type WSMessage =
   | { type: "audio"; data: string }
   | { type: "video"; data: string }
+  | { type: "text"; text: string }
   | { type: "transcript"; text: string }
   | { type: "interrupted" }
   | { type: "status"; status: string }
@@ -13,6 +14,7 @@ export type WSMessage =
   | { type: "usage_warning"; minutes_remaining: number }
   | { type: "sos_active"; message: string }
   | { type: "emergency"; location?: { lat: number; lng: number }; timestamp: number }
+  | { type: "story_image"; data: string; caption?: string }
   | { type: "ping" }
   | { type: "pong" };
 

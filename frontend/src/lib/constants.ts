@@ -11,7 +11,7 @@ export const RECONNECT_BASE_DELAY = 1000;
 export const RECONNECT_MAX_DELAY = 30000;
 export const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "";
 
-export const MODES = ["navigation", "reading", "shopping", "social"] as const;
+export const MODES = ["navigation", "reading", "shopping", "social", "screen", "story"] as const;
 export type Mode = (typeof MODES)[number];
 
 export const MODE_LABELS: Record<Mode, string> = {
@@ -19,6 +19,8 @@ export const MODE_LABELS: Record<Mode, string> = {
   reading: "Read",
   shopping: "Shop",
   social: "Social",
+  screen: "Screen",
+  story: "Story",
 };
 
 export const MODE_COLORS: Record<Mode, string> = {
@@ -26,6 +28,8 @@ export const MODE_COLORS: Record<Mode, string> = {
   reading: "bg-emerald-600 hover:bg-emerald-700",
   shopping: "bg-amber-600 hover:bg-amber-700",
   social: "bg-purple-600 hover:bg-purple-700",
+  screen: "bg-violet-600 hover:bg-violet-700",
+  story: "bg-rose-600 hover:bg-rose-700",
 };
 
 export const MODE_ICONS: Record<Mode, string> = {
@@ -33,6 +37,8 @@ export const MODE_ICONS: Record<Mode, string> = {
   reading: "📖",
   shopping: "🛒",
   social: "👥",
+  screen: "🖥️",
+  story: "✍️",
 };
 
 export const MODE_DESCRIPTIONS: Record<Mode, string> = {
@@ -40,4 +46,6 @@ export const MODE_DESCRIPTIONS: Record<Mode, string> = {
   reading: "Signs, labels & text",
   shopping: "Products & prices",
   social: "People & expressions",
+  screen: "UI help & navigation",
+  story: "Creative stories & images",
 };

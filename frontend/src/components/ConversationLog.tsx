@@ -7,6 +7,7 @@ export interface ConversationEntry {
   text: string;
   timestamp: number;
   bookmarked?: boolean;
+  images?: string[];
 }
 
 interface Props {
@@ -42,7 +43,7 @@ export default function ConversationLog({ entries, isRunning, onBookmark, onExpo
   return (
     <div
       ref={scrollRef}
-      className="rounded-2xl border border-border bg-card/50 backdrop-blur-sm p-4 min-h-[140px] max-h-[240px] overflow-y-auto scroll-smooth"
+      className="rounded-2xl border border-border bg-card/50 backdrop-blur-sm p-4 min-h-[140px] max-h-[50vh] overflow-y-auto scroll-smooth"
       role="log"
       aria-live="polite"
       aria-label="Conversation history"
@@ -68,17 +69,30 @@ export default function ConversationLog({ entries, isRunning, onBookmark, onExpo
               {entry.role === "user" ? "You" : entry.role === "system" ? "System" : "SightLine"}
             </span>
             <div className={`flex items-start gap-1.5 max-w-[85%] ${entry.role === "user" ? "flex-row-reverse" : ""}`}>
-              <p
+              <div
                 className={`text-sm leading-relaxed rounded-xl px-3 py-2 ${
                   entry.role === "user"
-                    ? "bg-blue-500/15 text-blue-300"
+                    ? "bg-blue-500/10 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300"
                     : entry.role === "system"
-                    ? "bg-amber-500/10 text-amber-400/80 text-xs italic"
+                    ? "bg-amber-500/10 text-amber-600/80 dark:text-amber-400/80 text-xs italic"
                     : "bg-card text-card-foreground/80"
                 } ${entry.bookmarked ? "border-l-2 border-amber-400" : ""}`}
               >
-                {entry.text}
-              </p>
+                <p>{entry.text}</p>
+                {entry.images && entry.images.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {entry.images.map((src, i) => (
+                      <img
+                        key={i}
+                        src={src}
+                        alt={`Story illustration ${i + 1}`}
+                        className="rounded-lg max-w-[200px] max-h-[200px] object-cover border border-border"
+                        loading="lazy"
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
               {entry.role === "assistant" && onBookmark && (
                 <button
                   onClick={() => onBookmark(entry.id)}

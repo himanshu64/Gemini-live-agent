@@ -32,6 +32,18 @@ const MODE_ACTIONS: Record<Mode, { label: string; prompt: string }[]> = {
     { label: "How many?", prompt: "How many people are there?" },
     { label: "Describe setting", prompt: "Describe the social setting" },
   ],
+  screen: [
+    { label: "What's on screen?", prompt: "Describe what's on my screen right now" },
+    { label: "Where to click?", prompt: "Where should I click to proceed?" },
+    { label: "Read this page", prompt: "Read the text on this page" },
+    { label: "Help with form", prompt: "Help me fill out this form" },
+  ],
+  story: [
+    { label: "Bedtime story", prompt: "Tell me a bedtime story" },
+    { label: "Comic strip", prompt: "Create a comic strip about an adventure" },
+    { label: "Illustrate scene", prompt: "Illustrate what you see in a story" },
+    { label: "Storyboard", prompt: "Make a storyboard for a short film" },
+  ],
 };
 
 export default function QuickActions({ currentMode, onAction, disabled }: Props) {

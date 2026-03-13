@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { onAuthStateChanged, type User } from "firebase/auth";
-import { auth, signInAnonymously, linkWithGoogle, signOut, getIdToken } from "@/lib/firebase";
+import { auth, signInAnonymously, linkWithGoogle, googleSignIn, signOut, getIdToken } from "@/lib/firebase";
 
 interface AuthState {
   user: User | null;
@@ -42,9 +42,22 @@ export function useAuth(): AuthState {
     try {
       if (user?.isAnonymous) {
         await linkWithGoogle();
+      } else {
+        // No user or already authenticated — do direct Google sign-in
+        await googleSignIn();
       }
-    } catch (err) {
-      console.error("[Auth] Google sign-in failed:", err);
+    } catch (err: unknown) {
+      // If linking fails (e.g. credential already in use), fall back to direct sign-in
+      if (err instanceof Error && "code" in err && (err as { code: string }).code === "auth/credential-already-in-use") {
+        try {
+          await signOut();
+          await googleSignIn();
+        } catch (innerErr) {
+          console.error("[Auth] Fallback Google sign-in failed:", innerErr);
+        }
+      } else {
+        console.error("[Auth] Google sign-in failed:", err);
+      }
     }
   }, [user]);
 

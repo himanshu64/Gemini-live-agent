@@ -2,6 +2,7 @@ import { initializeApp, getApps, type FirebaseApp } from "firebase/app";
 import {
   getAuth,
   signInAnonymously as fbSignInAnon,
+  signInWithPopup,
   GoogleAuthProvider,
   linkWithPopup,
   signOut as fbSignOut,
@@ -48,6 +49,14 @@ export async function linkWithGoogle(): Promise<User> {
   if (!user) throw new Error("No current user");
   const provider = new GoogleAuthProvider();
   const cred = await linkWithPopup(user, provider);
+  return cred.user;
+}
+
+/** Direct Google sign-in (when no anonymous user exists) */
+export async function googleSignIn(): Promise<User> {
+  const a = getFirebaseAuth();
+  const provider = new GoogleAuthProvider();
+  const cred = await signInWithPopup(a, provider);
   return cred.user;
 }
 

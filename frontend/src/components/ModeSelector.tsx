@@ -19,6 +19,14 @@ const MODE_STYLES: Record<Mode, { active: string; inactive: string }> = {
     active: "bg-purple-500/20 border-purple-500/50 text-purple-400",
     inactive: "bg-card/50 border-border text-muted-foreground hover:border-purple-500/30",
   },
+  screen: {
+    active: "bg-violet-500/20 border-violet-500/50 text-violet-400",
+    inactive: "bg-card/50 border-border text-muted-foreground hover:border-violet-500/30",
+  },
+  story: {
+    active: "bg-rose-500/20 border-rose-500/50 text-rose-400",
+    inactive: "bg-card/50 border-border text-muted-foreground hover:border-rose-500/30",
+  },
 };
 
 interface Props {
@@ -28,7 +36,7 @@ interface Props {
 
 export default function ModeSelector({ currentMode, onModeChange }: Props) {
   return (
-    <div className="grid grid-cols-2 gap-3" role="radiogroup" aria-label="Assistant mode">
+    <div className="grid grid-cols-3 gap-2 sm:gap-3" role="radiogroup" aria-label="Assistant mode">
       {MODES.map((mode) => {
         const isActive = currentMode === mode;
         const style = MODE_STYLES[mode];

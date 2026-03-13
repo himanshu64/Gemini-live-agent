@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useWebSocket, type WSMessage } from "@/hooks/useWebSocket";
 import { useCamera } from "@/hooks/useCamera";
+import { useScreenShare } from "@/hooks/useScreenShare";
 import { useMicrophone } from "@/hooks/useMicrophone";
 import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 import { useSwipeGesture } from "@/hooks/useSwipeGesture";
@@ -43,6 +44,8 @@ export default function Home() {
   const [audioMuted, setAudioMuted] = useState(false);
   const [sosActive, setSosActive] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [textInput, setTextInput] = useState("");
+  const [inputSource, setInputSource] = useState<"camera" | "screen">("camera");
   const isSpeakingRef = useRef(false);
   const [activeStream, setActiveStream] = useState<MediaStream | null>(null);
   const hasAnnouncedRef = useRef(false);
@@ -101,6 +104,16 @@ export default function Home() {
           break;
         case "mode":
           addToast(`Mode: ${msg.mode}`, "success");
+          break;
+        case "story_image":
+          setConversation((prev) => {
+            const last = prev[prev.length - 1];
+            if (last && last.role === "assistant") {
+              const images = [...(last.images || []), msg.data];
+              return [...prev.slice(0, -1), { ...last, images }];
+            }
+            return [...prev, { ...makeEntry("assistant", msg.caption || ""), images: [msg.data] }];
+          });
           break;
         case "sos_active":
           setSosActive(true);
@@ -181,11 +194,27 @@ export default function Home() {
     flip: flipCamera, facing: cameraFacing, torchSupported, torchOn, toggleTorch,
   } = useCamera(handleVideoFrame, { lowPower: lowPowerMode });
   const { isActive: micActive, start: startMic, stop: stopMic } = useMicrophone(handleAudioChunk);
+  const { isActive: screenActive, start: startScreenShare, stop: stopScreenShare, streamRef: screenStreamRef, videoRef: screenVideoRef } = useScreenShare(handleVideoFrame);
 
   // Sync streamRef into state so we can safely pass it during render
   useEffect(() => {
-    setActiveStream(streamRef.current);
-  }, [cameraActive, streamRef]);
+    if (inputSource === "screen") {
+      setActiveStream(screenStreamRef.current);
+    } else {
+      setActiveStream(streamRef.current);
+    }
+  }, [cameraActive, screenActive, streamRef, screenStreamRef, inputSource]);
+
+  // --- Send text message via WebSocket ---
+  const handleSendText = useCallback(
+    (text: string) => {
+      if (connectionState !== "connected" || !text.trim()) return;
+      const trimmed = text.trim();
+      setConversation((prev) => [...prev, makeEntry("user", trimmed)]);
+      send({ type: "text", text: trimmed });
+    },
+    [connectionState, send]
+  );
 
   // --- Quick action: send text as user speech ---
   const handleQuickAction = useCallback(
@@ -201,26 +230,32 @@ export default function Home() {
   const handleStart = useCallback(async () => {
     setStartError("");
     stopSpeaking();
-    speak("Requesting camera and microphone access.");
 
-    try {
-      const camStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
-        audio: true,
-      });
-      camStream.getTracks().forEach((t) => t.stop());
-    } catch (err) {
-      const msg =
-        err instanceof DOMException && err.name === "NotAllowedError"
-          ? "Camera and microphone permission denied. Please allow in browser settings and try again."
-          : err instanceof DOMException && err.name === "AbortError"
-          ? "Camera timed out. Close other apps using the camera and try again."
-          : `Permission error: ${err instanceof Error ? err.message : err}`;
-      setStartError(msg);
-      speak(msg);
-      soundError();
-      addToast("Permission denied", "error");
-      return;
+    const useScreen = inputSource === "screen";
+
+    if (!useScreen) {
+      speak("Requesting camera and microphone access.");
+      try {
+        const camStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment" },
+          audio: true,
+        });
+        camStream.getTracks().forEach((t) => t.stop());
+      } catch (err) {
+        const msg =
+          err instanceof DOMException && err.name === "NotAllowedError"
+            ? "Camera and microphone permission denied. Please allow in browser settings and try again."
+            : err instanceof DOMException && err.name === "AbortError"
+            ? "Camera timed out. Close other apps using the camera and try again."
+            : `Permission error: ${err instanceof Error ? err.message : err}`;
+        setStartError(msg);
+        speak(msg);
+        soundError();
+        addToast("Permission denied", "error");
+        return;
+      }
+    } else {
+      speak("Requesting screen share access.");
     }
 
     speak("Permissions granted. Connecting.");
@@ -239,12 +274,22 @@ export default function Home() {
       soundConnected();
       vibrate("connected");
       addToast("Connected to SightLine", "success");
-      speak("Connected. Starting camera and microphone.");
-      await startCamera();
+
+      if (useScreen) {
+        speak("Connected. Starting screen share and microphone.");
+        await startScreenShare();
+      } else {
+        speak("Connected. Starting camera and microphone.");
+        await startCamera();
+      }
       await startMic();
       setIsListening(true);
-      setConversation([makeEntry("system", `Session started — ${currentMode} mode`)]);
-      speak("Camera is active. SightLine is analyzing what your camera sees.");
+      setConversation([makeEntry("system", `Session started — ${currentMode} mode${useScreen ? " (screen share)" : ""}`)]);
+      if (useScreen) {
+        speak("Screen share is active. SightLine is analyzing your screen.");
+      } else {
+        speak("Camera is active. SightLine is analyzing what your camera sees.");
+      }
     } catch (err) {
       const msg = `Failed to connect: ${err instanceof Error ? err.message : err}`;
       setStartError(msg);
@@ -252,13 +297,14 @@ export default function Home() {
       soundError();
       addToast("Connection failed", "error");
     }
-  }, [connect, startCamera, startMic, addToast, currentMode, verifyCaptcha, setCaptchaNonce]);
+  }, [connect, startCamera, startScreenShare, startMic, addToast, currentMode, verifyCaptcha, setCaptchaNonce, inputSource]);
 
   const handleStop = useCallback(() => {
     soundDisconnected();
     vibrate("disconnected");
     stopMic();
     stopCamera();
+    stopScreenShare();
     disconnect();
     stopAudioPlayback();
     stopSpeaking();
@@ -277,7 +323,7 @@ export default function Home() {
 
     addToast("Session ended", "info");
     speak(summary);
-  }, [stopMic, stopCamera, disconnect, stopAudioPlayback, addToast, conversation]);
+  }, [stopMic, stopCamera, stopScreenShare, disconnect, stopAudioPlayback, addToast, conversation]);
 
   // --- Bookmark & Export ---
   const handleBookmark = useCallback((id: string) => {
@@ -436,7 +482,7 @@ export default function Home() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }); // intentionally no deps — uses latest closure values via isRunning
 
-  const isRunning = connectionState === "connected" && cameraActive && micActive;
+  const isRunning = connectionState === "connected" && (cameraActive || screenActive) && micActive;
   const isReconnecting = connectionState === "reconnecting";
 
   // --- Visualizer state ---
@@ -501,6 +547,7 @@ export default function Home() {
     <main className="flex min-h-dvh flex-col" ref={swipeRef} aria-roledescription="AI vision assistant">
       <a href="#main-controls" className="skip-link">Skip to controls</a>
       <video ref={videoRef} className="sr-only-video" playsInline muted aria-hidden="true" />
+      <video ref={screenVideoRef} className="sr-only-video" playsInline muted aria-hidden="true" />
 
       <OnboardingModal onComplete={() => {}} />
 
@@ -650,6 +697,37 @@ export default function Home() {
           onExport={handleExport}
         />
 
+        {/* Text Input */}
+        {isRunning && (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSendText(textInput);
+              setTextInput("");
+            }}
+            className="flex gap-2"
+            role="search"
+            aria-label="Send a text message"
+          >
+            <input
+              type="text"
+              value={textInput}
+              onChange={(e) => setTextInput(e.target.value)}
+              placeholder="Type a message..."
+              className="flex-1 rounded-full border border-border bg-card/50 px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+              aria-label="Type a message to send"
+            />
+            <button
+              type="submit"
+              disabled={!textInput.trim()}
+              className="shrink-0 rounded-full bg-foreground px-4 py-2.5 text-sm font-medium text-background transition-opacity disabled:opacity-30"
+              aria-label="Send message"
+            >
+              Send
+            </button>
+          </form>
+        )}
+
         {/* Quick Actions */}
         {isRunning && (
           <QuickActions currentMode={currentMode} onAction={handleQuickAction} disabled={!isRunning} />
@@ -663,6 +741,34 @@ export default function Home() {
           <p className="text-center text-[10px] text-muted-foreground/40">
             Swipe left/right to switch modes
           </p>
+        )}
+
+        {/* Input source toggle */}
+        {!isRunning && !isReconnecting && (
+          <div className="flex justify-center gap-2">
+            <button
+              onClick={() => setInputSource("camera")}
+              className={`rounded-full px-4 py-2 text-sm font-medium transition-all ${
+                inputSource === "camera"
+                  ? "bg-foreground text-background"
+                  : "bg-secondary/50 text-muted-foreground hover:bg-secondary"
+              }`}
+              aria-pressed={inputSource === "camera"}
+            >
+              📷 Camera
+            </button>
+            <button
+              onClick={() => setInputSource("screen")}
+              className={`rounded-full px-4 py-2 text-sm font-medium transition-all ${
+                inputSource === "screen"
+                  ? "bg-foreground text-background"
+                  : "bg-secondary/50 text-muted-foreground hover:bg-secondary"
+              }`}
+              aria-pressed={inputSource === "screen"}
+            >
+              🖥️ Screen
+            </button>
+          </div>
         )}
 
         {/* Controls */}
