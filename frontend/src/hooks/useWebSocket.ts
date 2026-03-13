@@ -10,6 +10,7 @@ export type WSMessage =
   | { type: "status"; status: string }
   | { type: "mode"; mode: string }
   | { type: "error"; message: string }
+  | { type: "usage_warning"; minutes_remaining: number }
   | { type: "ping" }
   | { type: "pong" };
 
@@ -19,20 +20,33 @@ export function useWebSocket(onMessage: (msg: WSMessage) => void) {
   const wsRef = useRef<WebSocket | null>(null);
   const [connectionState, setConnectionState] = useState<ConnectionState>("disconnected");
   const onMessageRef = useRef(onMessage);
-  const gotErrorRef = useRef(false);
+  const getTokenRef = useRef<(() => Promise<string>) | null>(null);
 
   useEffect(() => {
     onMessageRef.current = onMessage;
   }, [onMessage]);
 
-  const connect = useCallback(() => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) return Promise.resolve();
+  /** Set the token provider (Firebase getIdToken or static API_TOKEN) */
+  const setTokenProvider = useCallback((provider: () => Promise<string>) => {
+    getTokenRef.current = provider;
+  }, []);
 
-    gotErrorRef.current = false;
+  const connect = useCallback(async () => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) return;
+
+    // Get auth token
+    let token = API_TOKEN;
+    if (getTokenRef.current) {
+      try {
+        token = await getTokenRef.current();
+      } catch {
+        // Fall back to static API_TOKEN
+      }
+    }
 
     return new Promise<void>((resolve, reject) => {
       setConnectionState("connecting");
-      const wsUrl = API_TOKEN ? `${WS_URL}?token=${encodeURIComponent(API_TOKEN)}` : WS_URL;
+      const wsUrl = token ? `${WS_URL}?token=${encodeURIComponent(token)}` : WS_URL;
       console.log("[WS] Connecting to:", wsUrl.replace(/token=.*/, "token=***"));
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
@@ -58,7 +72,6 @@ export function useWebSocket(onMessage: (msg: WSMessage) => void) {
         try {
           const msg = JSON.parse(event.data) as WSMessage;
 
-          // Handle keepalive pings from server
           if (msg.type === "ping") {
             if (ws.readyState === WebSocket.OPEN) {
               ws.send(JSON.stringify({ type: "pong" }));
@@ -66,7 +79,6 @@ export function useWebSocket(onMessage: (msg: WSMessage) => void) {
             return;
           }
 
-          // Handle the "ready" signal — session is fully initialized
           if (msg.type === "status" && msg.status === "ready") {
             console.log("[WS] Server ready — session initialized");
             setConnectionState("connected");
@@ -74,11 +86,6 @@ export function useWebSocket(onMessage: (msg: WSMessage) => void) {
               resolved = true;
               resolve();
             }
-          }
-
-          // Track if we got a server error (don't reconnect)
-          if (msg.type === "error") {
-            gotErrorRef.current = true;
           }
 
           onMessageRef.current(msg);
@@ -92,9 +99,6 @@ export function useWebSocket(onMessage: (msg: WSMessage) => void) {
         console.log(`[WS] Closed: code=${event.code} reason=${event.reason}`);
         setConnectionState("disconnected");
         wsRef.current = null;
-
-        // Do NOT auto-reconnect. The user must tap Start again.
-        // This prevents infinite reconnect loops on server errors.
         if (!resolved) {
           resolved = true;
           reject(new Error(event.reason || "Connection closed"));
@@ -127,5 +131,5 @@ export function useWebSocket(onMessage: (msg: WSMessage) => void) {
     };
   }, []);
 
-  return { connectionState, connect, disconnect, send };
+  return { connectionState, connect, disconnect, send, setTokenProvider };
 }

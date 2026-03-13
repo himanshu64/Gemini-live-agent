@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
 import { useWebSocket, type WSMessage } from "@/hooks/useWebSocket";
 import { useCamera } from "@/hooks/useCamera";
 import { useMicrophone } from "@/hooks/useMicrophone";
@@ -18,11 +19,12 @@ export default function Home() {
   const isSpeakingRef = useRef(false);
   const hasAnnouncedRef = useRef(false);
 
+  const { uid, isAnonymous, loading: authLoading, getToken, signInWithGoogle } = useAuth();
+
   // Announce app loaded on first visit
   useEffect(() => {
-    if (hasAnnouncedRef.current) return;
+    if (hasAnnouncedRef.current || authLoading) return;
     hasAnnouncedRef.current = true;
-    // Short delay so voices are loaded
     const t = setTimeout(() => {
       speak(
         "SightLine ready. Tap anywhere on the screen, then tap the Start button at the bottom to begin. " +
@@ -30,7 +32,7 @@ export default function Home() {
       );
     }, 800);
     return () => clearTimeout(t);
-  }, []);
+  }, [authLoading]);
 
   const { isPlaying, play: playAudio, stopAll: stopAudioPlayback } = useAudioPlayback();
 
@@ -38,7 +40,7 @@ export default function Home() {
     (msg: WSMessage) => {
       switch (msg.type) {
         case "audio":
-          stopSpeaking(); // stop TTS when agent speaks
+          stopSpeaking();
           isSpeakingRef.current = true;
           playAudio(msg.data);
           break;
@@ -50,11 +52,11 @@ export default function Home() {
           isSpeakingRef.current = false;
           break;
         case "status":
-          if (msg.status === "listening") {
-            setIsListening(true);
-          } else if (msg.status === "processing") {
-            setIsListening(false);
-          }
+          if (msg.status === "listening") setIsListening(true);
+          else if (msg.status === "processing") setIsListening(false);
+          break;
+        case "usage_warning":
+          speak(`You have ${msg.minutes_remaining} minutes remaining today.`);
           break;
         case "error":
           console.error("[Agent Error]", msg.message);
@@ -66,7 +68,14 @@ export default function Home() {
     [playAudio, stopAudioPlayback]
   );
 
-  const { connectionState, connect, disconnect, send } = useWebSocket(handleMessage);
+  const { connectionState, connect, disconnect, send, setTokenProvider } = useWebSocket(handleMessage);
+
+  // Wire up Firebase token provider
+  useEffect(() => {
+    if (uid) {
+      setTokenProvider(getToken);
+    }
+  }, [uid, getToken, setTokenProvider]);
 
   const handleAudioChunk = useCallback(
     (base64: string) => {
@@ -91,17 +100,13 @@ export default function Home() {
     setStartError("");
     stopSpeaking();
 
-    // Step 1: Request permissions FIRST with audio guidance
     speak("Requesting camera and microphone access. Please allow when prompted.");
 
     try {
-      // Pre-request permissions so the user gets the browser dialog
-      // before we try to connect to the server
       const camStream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "environment" },
         audio: true,
       });
-      // Release the test streams immediately
       camStream.getTracks().forEach((t) => t.stop());
     } catch (err) {
       const msg =
@@ -161,24 +166,41 @@ export default function Home() {
 
   const isRunning = connectionState === "connected" && cameraActive && micActive;
 
+  if (authLoading) {
+    return (
+      <main className="flex min-h-dvh items-center justify-center" aria-busy="true">
+        <p className="text-xl text-gray-400">Loading SightLine...</p>
+      </main>
+    );
+  }
+
   return (
     <main className="flex min-h-dvh flex-col">
-      {/* Hidden video element for camera — fully invisible */}
       <video ref={videoRef} className="sr-only-video" playsInline muted aria-hidden="true" />
 
       {/* Header */}
       <header className="flex items-center justify-between border-b border-gray-800 px-4 py-3">
         <h1 className="text-2xl font-bold text-white">SightLine</h1>
-        <StatusIndicator
-          connectionState={connectionState}
-          isListening={isListening}
-          isSpeaking={isPlaying}
-        />
+        <div className="flex items-center gap-2">
+          {isAnonymous && (
+            <button
+              onClick={signInWithGoogle}
+              className="rounded-lg bg-gray-800 px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 min-h-[44px] min-w-[44px]"
+              aria-label="Sign in with Google to save your preferences"
+            >
+              Sign in
+            </button>
+          )}
+          <StatusIndicator
+            connectionState={connectionState}
+            isListening={isListening}
+            isSpeaking={isPlaying}
+          />
+        </div>
       </header>
 
       {/* Main content */}
       <div className="flex flex-1 flex-col justify-between p-4 gap-4">
-        {/* Transcript / error area */}
         <div
           className="rounded-2xl bg-gray-900 p-4 min-h-[120px] border border-gray-800"
           role="log"
@@ -192,12 +214,9 @@ export default function Home() {
           </p>
         </div>
 
-        {/* Mode selector */}
         <ModeSelector currentMode={currentMode} onModeChange={handleModeChange} />
 
-        {/* Bottom controls */}
         <div className="flex flex-col gap-3">
-          {/* Start/Stop button */}
           <button
             onClick={isRunning ? handleStop : handleStart}
             className={`w-full rounded-2xl px-6 py-5 text-2xl font-bold text-white transition-colors ${
@@ -210,7 +229,6 @@ export default function Home() {
             {isRunning ? "Stop" : "Start"}
           </button>
 
-          {/* Emergency button */}
           <EmergencyButton onEmergency={handleEmergency} />
         </div>
       </div>
