@@ -15,8 +15,9 @@ export function useCamera(onFrame: (base64: string) => void) {
 
   const start = useCallback(async () => {
     try {
+      // Permissions already granted in page.tsx pre-check
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment", width: { ideal: 640 }, height: { ideal: 480 } },
+        video: { facingMode: { ideal: "environment" }, width: { ideal: 640 }, height: { ideal: 480 } },
       });
       streamRef.current = stream;
 
