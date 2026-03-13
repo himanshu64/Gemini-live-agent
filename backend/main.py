@@ -13,8 +13,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from google.genai import types
 
 from config import config
-
-logger = logging.getLogger(__name__)
 from agent.sightline_agent import create_session_service, create_runner
 from google.adk.agents.live_request_queue import LiveRequestQueue
 from services.auth_service import verify_token
