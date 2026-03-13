@@ -6,8 +6,8 @@ interface Props {
   children: React.ReactNode;
 }
 
-export default function AuthGuard({ children }: Props) {
-  const { uid, loading, signInWithGoogle } = useAuth();
+export default function AuthGuard({ children, allowAnonymous = false }: Props & { allowAnonymous?: boolean }) {
+  const { uid, isAnonymous, loading, signInWithGoogle } = useAuth();
 
   if (loading) {
     return (
@@ -20,7 +20,7 @@ export default function AuthGuard({ children }: Props) {
     );
   }
 
-  if (!uid) {
+  if (!uid || (!allowAnonymous && isAnonymous)) {
     return (
       <main className="flex min-h-dvh flex-col items-center justify-center gap-6 px-6 py-10 text-center">
         <h1 className="font-serif text-3xl sm:text-4xl italic text-foreground">SightLine</h1>
