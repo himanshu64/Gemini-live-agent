@@ -3,8 +3,6 @@
  * Used to guide blind users through permission prompts and app state.
  */
 
-let currentUtterance: SpeechSynthesisUtterance | null = null;
-
 export function speak(text: string, interrupt = true) {
   if (typeof window === "undefined" || !window.speechSynthesis) return;
 
@@ -22,12 +20,10 @@ export function speak(text: string, interrupt = true) {
     || voices.find((v) => v.lang.startsWith("en"));
   if (english) utterance.voice = english;
 
-  currentUtterance = utterance;
   window.speechSynthesis.speak(utterance);
 }
 
 export function stopSpeaking() {
   if (typeof window === "undefined") return;
   window.speechSynthesis.cancel();
-  currentUtterance = null;
 }

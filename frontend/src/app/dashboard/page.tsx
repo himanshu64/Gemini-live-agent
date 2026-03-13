@@ -4,6 +4,7 @@ import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { API_URL } from "@/lib/constants";
+import Image from "next/image";
 import Link from "next/link";
 
 interface UsageData {
@@ -39,23 +40,6 @@ export default function DashboardPage() {
   const [error, setError] = useState("");
   const [fetching, setFetching] = useState(false);
 
-  // Redirect to sign-in if not authenticated
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/auth/signin?callbackUrl=/dashboard");
-    }
-  }, [status, router]);
-
-  if (status === "loading") {
-    return (
-      <main className="flex min-h-dvh items-center justify-center" aria-busy="true">
-        <p className="text-xl text-gray-400">Loading...</p>
-      </main>
-    );
-  }
-
-  if (status === "unauthenticated") return null;
-
   const fetchUsage = useCallback(async () => {
     if (!uid) return;
     setFetching(true);
@@ -75,9 +59,26 @@ export default function DashboardPage() {
     }
   }, [uid, getToken]);
 
+  // Redirect to sign-in if not authenticated
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/auth/signin?callbackUrl=/dashboard");
+    }
+  }, [status, router]);
+
   useEffect(() => {
     if (uid) fetchUsage();
   }, [uid, fetchUsage]);
+
+  if (status === "loading") {
+    return (
+      <main className="flex min-h-dvh items-center justify-center" aria-busy="true">
+        <p className="text-xl text-gray-400">Loading...</p>
+      </main>
+    );
+  }
+
+  if (status === "unauthenticated") return null;
 
   return (
     <main className="flex min-h-dvh flex-col">
@@ -103,7 +104,7 @@ export default function DashboardPage() {
           <div className="flex flex-col gap-2 text-gray-400">
             {session?.user?.image && (
               <div className="flex items-center gap-3 mb-2">
-                <img src={session.user.image} alt="" className="w-10 h-10 rounded-full" />
+                <Image src={session.user.image} alt="" width={40} height={40} className="rounded-full" />
                 <div>
                   <p className="text-gray-200 font-medium">{session.user.name}</p>
                   <p className="text-sm">{session.user.email}</p>
