@@ -1,10 +1,14 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useSyncExternalStore } from "react";
 import { usePageAnimations } from "@/hooks/usePageAnimations";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuthContext } from "@/lib/auth/auth-provider";
+
+const subscribe = () => () => {};
+const getOrigin = () => window.location.origin;
+const getServerOrigin = () => "";
 
 function LoginForm() {
   const pageRef = usePageAnimations();
@@ -14,11 +18,7 @@ function LoginForm() {
   const callbackUrl = searchParams.get("callbackUrl") || "/live";
   const urlError = searchParams.get("error");
   const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-  const [origin, setOrigin] = useState("");
-
-  useEffect(() => {
-    setOrigin(window.location.origin);
-  }, []);
+  const origin = useSyncExternalStore(subscribe, getOrigin, getServerOrigin);
 
   useEffect(() => {
     if (user) router.replace(callbackUrl);
