@@ -14,14 +14,32 @@ export interface AuthResponse {
 }
 
 export async function loginWithGoogle(idToken: string): Promise<AuthResponse> {
-  const res = await fetch(`${API_URL}/auth/google`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ id_token: idToken }),
-  });
+  const url = `${API_URL}/auth/google`;
+  console.log("[auth] POST", url);
+
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id_token: idToken }),
+    });
+  } catch (err) {
+    console.error("[auth] Network error reaching backend:", err);
+    throw new Error(`Cannot reach backend at ${API_URL}. Is NEXT_PUBLIC_API_URL set?`);
+  }
+
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ detail: "Login failed" }));
-    throw new Error(err.detail || `HTTP ${res.status}`);
+    const text = await res.text().catch(() => "");
+    let detail = `HTTP ${res.status}`;
+    try {
+      const json = JSON.parse(text);
+      detail = json.detail || detail;
+    } catch {
+      if (text) detail += `: ${text.slice(0, 200)}`;
+    }
+    console.error("[auth] Backend error:", detail);
+    throw new Error(detail);
   }
   return res.json();
 }
