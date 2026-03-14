@@ -130,10 +130,12 @@ gcloud run deploy sightline-frontend --quiet \
   --memory=256Mi \
   --cpu=1
 
-FRONTEND_URL=$(gcloud run services describe sightline-frontend \
-  --project="$PROJECT_ID" \
-  --region="$REGION" \
-  --format="value(status.url)")
+if [ -z "${FRONTEND_URL:-}" ]; then
+  FRONTEND_URL=$(gcloud run services describe sightline-frontend \
+    --project="$PROJECT_ID" \
+    --region="$REGION" \
+    --format="value(status.url)")
+fi
 
 # Update backend with frontend origin for CORS
 echo "==> Updating backend CORS..."
