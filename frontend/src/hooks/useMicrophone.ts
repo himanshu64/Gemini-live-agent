@@ -10,10 +10,15 @@ export function useMicrophone(onAudioChunk: (base64: string) => void) {
   const contextRef = useRef<AudioContext | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const processorRef = useRef<ScriptProcessorNode | null>(null);
+  const mutedRef = useRef(false);
   const onChunkRef = useRef(onAudioChunk);
   useEffect(() => {
     onChunkRef.current = onAudioChunk;
   }, [onAudioChunk]);
+
+  const setMuted = useCallback((muted: boolean) => {
+    mutedRef.current = muted;
+  }, []);
 
   const start = useCallback(async () => {
     try {
@@ -36,6 +41,7 @@ export function useMicrophone(onAudioChunk: (base64: string) => void) {
       processorRef.current = processor;
 
       processor.onaudioprocess = (e) => {
+        if (mutedRef.current) return;
         const inputData = e.inputBuffer.getChannelData(0);
         const base64 = float32ToInt16Base64(inputData);
         onChunkRef.current(base64);
@@ -65,5 +71,5 @@ export function useMicrophone(onAudioChunk: (base64: string) => void) {
     };
   }, [stop]);
 
-  return { isActive, start, stop };
+  return { isActive, start, stop, setMuted };
 }

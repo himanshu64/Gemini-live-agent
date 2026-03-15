@@ -9,12 +9,14 @@ interface Props {
   lowPower: boolean;
   videoDisabled: boolean;
   audioMuted: boolean;
+  micMuted: boolean;
   onFlip: () => void;
   onToggleTorch: () => void;
   onTogglePreview: () => void;
   onToggleLowPower: () => void;
   onToggleVideo: () => void;
   onToggleMute: () => void;
+  onToggleMicMute: () => void;
 }
 
 export default function CameraControls({
@@ -26,12 +28,14 @@ export default function CameraControls({
   lowPower,
   videoDisabled,
   audioMuted,
+  micMuted,
   onFlip,
   onToggleTorch,
   onTogglePreview,
   onToggleLowPower,
   onToggleVideo,
   onToggleMute,
+  onToggleMicMute,
 }: Props) {
   if (!isActive) return null;
 
@@ -40,6 +44,7 @@ export default function CameraControls({
   const btnOff = "bg-secondary/50 text-secondary-foreground/70 hover:bg-secondary/80";
   const btnOn = "bg-blue-500/20 text-blue-300 ring-1 ring-blue-500/40";
   const btnDanger = "bg-red-500/20 text-red-300 ring-1 ring-red-500/40";
+  const btnWarning = "bg-amber-500/20 text-amber-300 ring-1 ring-amber-500/40";
 
   return (
     <div className="flex items-center justify-center gap-2 flex-wrap" role="toolbar" aria-label="Camera controls">
@@ -85,6 +90,16 @@ export default function CameraControls({
         aria-pressed={audioMuted}
       >
         {audioMuted ? "🔇" : "🔊"}
+      </button>
+
+      <button
+        onClick={onToggleMicMute}
+        className={`${btnBase} ${micMuted ? btnWarning : btnOff}`}
+        aria-label={micMuted ? "Disable push-to-talk (unmute mic)" : "Enable push-to-talk (mute mic)"}
+        aria-pressed={micMuted}
+        title="Toggle push-to-talk mode (T)"
+      >
+        {micMuted ? "🤫" : "🎙️"}
       </button>
 
       <button

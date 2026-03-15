@@ -43,6 +43,7 @@ export default function Home() {
   const [lowPowerMode, setLowPowerMode] = useState(false);
   const [videoDisabled, setVideoDisabled] = useState(false);
   const [audioMuted, setAudioMuted] = useState(false);
+  const [micMuted, setMicMuted] = useState(false);
   const [sosActive, setSosActive] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [textInput, setTextInput] = useState("");
@@ -53,6 +54,7 @@ export default function Home() {
   const hasAnnouncedRef = useRef(false);
   const audioMutedRef = useRef(false);
   const videoDisabledRef = useRef(false);
+  const micMutedRef = useRef(false);
   const { addToast } = useToast();
   const isOnline = useOnlineStatus();
   const { containerRef: turnstileRef, verify: verifyCaptcha } = useTurnstile();
@@ -63,6 +65,7 @@ export default function Home() {
   // Keep refs in sync with state
   useEffect(() => { audioMutedRef.current = audioMuted; }, [audioMuted]);
   useEffect(() => { videoDisabledRef.current = videoDisabled; }, [videoDisabled]);
+  useEffect(() => { micMutedRef.current = micMuted; }, [micMuted]);
 
   // Welcome announcement (only once)
   useEffect(() => {
@@ -196,7 +199,7 @@ export default function Home() {
     videoRef, streamRef, isActive: cameraActive, start: startCamera, stop: stopCamera,
     flip: flipCamera, facing: cameraFacing, torchSupported, torchOn, toggleTorch,
   } = useCamera(handleVideoFrame, { lowPower: lowPowerMode });
-  const { isActive: micActive, start: startMic, stop: stopMic } = useMicrophone(handleAudioChunk);
+  const { isActive: micActive, start: startMic, stop: stopMic, setMuted: setMicInputMuted } = useMicrophone(handleAudioChunk);
   const { isActive: screenActive, start: startScreenShare, stop: stopScreenShare, streamRef: screenStreamRef, videoRef: screenVideoRef } = useScreenShare(handleVideoFrame);
 
   const {
@@ -334,6 +337,8 @@ export default function Home() {
     setSosActive(false);
     setVideoDisabled(false);
     setAudioMuted(false);
+    setMicMuted(false);
+    setMicInputMuted(false);
 
     const assistantMsgs = conversation.filter((e) => e.role === "assistant").length;
     const bookmarked = conversation.filter((e) => e.bookmarked).length;
@@ -344,7 +349,7 @@ export default function Home() {
 
     addToast("Session ended", "info");
     speak(summary);
-  }, [stopMic, stopCamera, stopScreenShare, disconnect, stopAudioPlayback, addToast, conversation]);
+  }, [stopMic, stopCamera, stopScreenShare, disconnect, stopAudioPlayback, addToast, conversation, setMicInputMuted]);
 
   // --- Bookmark & Export ---
   const handleBookmark = useCallback((id: string) => {
@@ -407,6 +412,32 @@ export default function Home() {
       addToast("Audio muted", "warning");
     }
   }, [audioMuted, stopAudioPlayback, addToast]);
+
+  // --- Mic mute toggle (mutes microphone input) ---
+  const handleToggleMicMute = useCallback(() => {
+    if (micMuted) {
+      setMicMuted(false);
+      setMicInputMuted(false);
+      speak("Microphone unmuted.");
+      addToast("Microphone on", "info");
+    } else {
+      setMicMuted(true);
+      setMicInputMuted(true);
+      speak("Microphone muted. Hold the talk button to speak.");
+      addToast("Microphone muted — hold to talk", "warning");
+    }
+  }, [micMuted, setMicInputMuted, addToast]);
+
+  // --- Push-to-talk: temporarily unmute mic while held ---
+  const handlePushToTalkStart = useCallback(() => {
+    if (!micMutedRef.current) return;
+    setMicInputMuted(false);
+  }, [setMicInputMuted]);
+
+  const handlePushToTalkEnd = useCallback(() => {
+    if (!micMutedRef.current) return;
+    setMicInputMuted(true);
+  }, [setMicInputMuted]);
 
   // --- Mode switching ---
   const handleModeChange = useCallback(
@@ -496,11 +527,32 @@ export default function Home() {
       } else if (e.key === "m" && e.ctrlKey && isRunning) {
         e.preventDefault();
         handleToggleMute();
+      } else if (e.key === "t" && !e.ctrlKey && !e.metaKey && isRunning) {
+        e.preventDefault();
+        handleToggleMicMute();
+      } else if (e.key === " " && !e.ctrlKey && !e.metaKey && isRunning && micMuted && !e.repeat) {
+        if (e.target instanceof HTMLButtonElement || e.target instanceof HTMLAnchorElement) return;
+        e.preventDefault();
+        handlePushToTalkStart();
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      if (e.key === " " && isRunning && micMuted) {
+        if (e.target instanceof HTMLButtonElement || e.target instanceof HTMLAnchorElement) return;
+        e.preventDefault();
+        handlePushToTalkEnd();
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
   }); // intentionally no deps — uses latest closure values via isRunning
 
   const isRunning = connectionState === "connected" && (cameraActive || screenActive) && micActive;
@@ -551,6 +603,12 @@ export default function Home() {
           {audioMuted && (
             <span className="text-[10px] sm:text-xs text-red-400 font-medium px-1.5 sm:px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 shrink-0" aria-label="Audio is muted">
               🔇
+            </span>
+          )}
+
+          {micMuted && (
+            <span className="text-[10px] sm:text-xs text-amber-400 font-medium px-1.5 sm:px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 shrink-0" aria-label="Microphone is muted — push to talk">
+              🎙️
             </span>
           )}
 
@@ -667,13 +725,34 @@ export default function Home() {
             lowPower={lowPowerMode}
             videoDisabled={videoDisabled}
             audioMuted={audioMuted}
+            micMuted={micMuted}
             onFlip={handleFlipCamera}
             onToggleTorch={handleToggleTorch}
             onTogglePreview={() => setShowPreview((p) => !p)}
             onToggleLowPower={handleToggleLowPower}
             onToggleVideo={handleToggleVideo}
             onToggleMute={handleToggleMute}
+            onToggleMicMute={handleToggleMicMute}
           />
+        )}
+
+        {/* Push-to-talk button — shown when mic is muted */}
+        {isRunning && micMuted && (
+          <button
+            onMouseDown={handlePushToTalkStart}
+            onMouseUp={handlePushToTalkEnd}
+            onMouseLeave={handlePushToTalkEnd}
+            onTouchStart={handlePushToTalkStart}
+            onTouchEnd={handlePushToTalkEnd}
+            onTouchCancel={handlePushToTalkEnd}
+            className="w-full rounded-2xl border-2 border-amber-500/40 bg-amber-500/10 px-4 py-4 sm:py-5 text-base sm:text-lg font-semibold text-amber-300 transition-all active:bg-amber-500/30 active:scale-[0.98] select-none"
+            aria-label="Hold to talk — release to mute microphone"
+          >
+            🎙️ Hold to Talk
+            <span className="block text-xs font-normal text-amber-400/60 mt-0.5">
+              or hold Space on keyboard
+            </span>
+          </button>
         )}
 
         {/* Offline banner */}
