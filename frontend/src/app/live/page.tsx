@@ -9,6 +9,7 @@ import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 import { useSwipeGesture } from "@/hooks/useSwipeGesture";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useTurnstile } from "@/hooks/useTurnstile";
+import { useVideoRecorder } from "@/hooks/useVideoRecorder";
 import { speak, stopSpeaking } from "@/lib/speak";
 import { vibrate } from "@/lib/haptics";
 import { soundConnected, soundDisconnected, soundModeChange, soundError, soundReconnecting, soundNotification } from "@/lib/sounds";
@@ -46,6 +47,7 @@ export default function Home() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [textInput, setTextInput] = useState("");
   const [inputSource, setInputSource] = useState<"camera" | "screen">("camera");
+  const [recordSession, setRecordSession] = useState(false);
   const isSpeakingRef = useRef(false);
   const [activeStream, setActiveStream] = useState<MediaStream | null>(null);
   const hasAnnouncedRef = useRef(false);
@@ -196,6 +198,24 @@ export default function Home() {
   } = useCamera(handleVideoFrame, { lowPower: lowPowerMode });
   const { isActive: micActive, start: startMic, stop: stopMic } = useMicrophone(handleAudioChunk);
   const { isActive: screenActive, start: startScreenShare, stop: stopScreenShare, streamRef: screenStreamRef, videoRef: screenVideoRef } = useScreenShare(handleVideoFrame);
+
+  const {
+    startRecording, stopRecording, isRecording, isSupported: isRecorderSupported,
+  } = useVideoRecorder();
+
+  // Start/stop recording in sync with the camera when the record toggle is on.
+  // This also handles the flip() case: camera becomes inactive then active again,
+  // producing a new recording for the new stream automatically.
+  useEffect(() => {
+    if (recordSession && cameraActive && streamRef.current) {
+      startRecording(streamRef.current);
+    } else {
+      stopRecording();
+    }
+  // streamRef is a stable ref object — access .current inside the effect to
+  // read the latest stream without adding it to the dependency array.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cameraActive, recordSession, startRecording, stopRecording]);
 
   // Sync streamRef into state so we can safely pass it during render
   useEffect(() => {
@@ -534,6 +554,13 @@ export default function Home() {
             </span>
           )}
 
+          {isRecording && (
+            <span className="text-[10px] sm:text-xs text-red-400 font-medium px-1.5 sm:px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 shrink-0 flex items-center gap-1" aria-label="Session is being recorded">
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" aria-hidden="true" />
+              REC
+            </span>
+          )}
+
           {/* Desktop nav */}
           <nav className="hidden sm:flex items-center gap-1" aria-label="Main navigation">
             <Link href="/guide" aria-label="User guide" className="rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors">
@@ -719,29 +746,46 @@ export default function Home() {
 
         {/* Input source toggle */}
         {!isRunning && !isReconnecting && (
-          <div className="flex justify-center gap-2">
-            <button
-              onClick={() => setInputSource("camera")}
-              className={`rounded-full px-4 py-2 text-sm font-medium transition-all ${
-                inputSource === "camera"
-                  ? "bg-foreground text-background"
-                  : "bg-secondary/50 text-muted-foreground hover:bg-secondary"
-              }`}
-              aria-pressed={inputSource === "camera"}
-            >
-              📷 Camera
-            </button>
-            <button
-              onClick={() => setInputSource("screen")}
-              className={`rounded-full px-4 py-2 text-sm font-medium transition-all ${
-                inputSource === "screen"
-                  ? "bg-foreground text-background"
-                  : "bg-secondary/50 text-muted-foreground hover:bg-secondary"
-              }`}
-              aria-pressed={inputSource === "screen"}
-            >
-              🖥️ Screen
-            </button>
+          <div className="flex flex-col items-center gap-2">
+            <div className="flex justify-center gap-2">
+              <button
+                onClick={() => setInputSource("camera")}
+                className={`rounded-full px-4 py-2 text-sm font-medium transition-all ${
+                  inputSource === "camera"
+                    ? "bg-foreground text-background"
+                    : "bg-secondary/50 text-muted-foreground hover:bg-secondary"
+                }`}
+                aria-pressed={inputSource === "camera"}
+              >
+                📷 Camera
+              </button>
+              <button
+                onClick={() => setInputSource("screen")}
+                className={`rounded-full px-4 py-2 text-sm font-medium transition-all ${
+                  inputSource === "screen"
+                    ? "bg-foreground text-background"
+                    : "bg-secondary/50 text-muted-foreground hover:bg-secondary"
+                }`}
+                aria-pressed={inputSource === "screen"}
+              >
+                🖥️ Screen
+              </button>
+            </div>
+
+            {isRecorderSupported && (
+              <button
+                onClick={() => setRecordSession((p) => !p)}
+                className={`rounded-full px-4 py-2 text-sm font-medium transition-all flex items-center gap-1.5 ${
+                  recordSession
+                    ? "bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30"
+                    : "bg-secondary/50 text-muted-foreground hover:bg-secondary"
+                }`}
+                aria-pressed={recordSession}
+                aria-label={recordSession ? "Disable session recording" : "Enable session recording"}
+              >
+                📹 {recordSession ? "Recording: ON" : "Record Session"}
+              </button>
+            )}
           </div>
         )}
 
