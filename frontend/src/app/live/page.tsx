@@ -531,6 +531,7 @@ export default function Home() {
         e.preventDefault();
         handleToggleMicMute();
       } else if (e.key === " " && !e.ctrlKey && !e.metaKey && isRunning && micMuted && !e.repeat) {
+        if (e.target instanceof HTMLButtonElement || e.target instanceof HTMLAnchorElement) return;
         e.preventDefault();
         handlePushToTalkStart();
       }
@@ -540,6 +541,7 @@ export default function Home() {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
 
       if (e.key === " " && isRunning && micMuted) {
+        if (e.target instanceof HTMLButtonElement || e.target instanceof HTMLAnchorElement) return;
         e.preventDefault();
         handlePushToTalkEnd();
       }
@@ -743,7 +745,7 @@ export default function Home() {
             onTouchStart={handlePushToTalkStart}
             onTouchEnd={handlePushToTalkEnd}
             onTouchCancel={handlePushToTalkEnd}
-            className="w-full rounded-2xl border-2 border-amber-500/40 bg-amber-500/10 px-4 py-4 sm:py-5 text-base sm:text-lg font-semibold text-amber-300 transition-all active:bg-amber-500/30 active:scale-[0.98] select-none touch-none"
+            className="w-full rounded-2xl border-2 border-amber-500/40 bg-amber-500/10 px-4 py-4 sm:py-5 text-base sm:text-lg font-semibold text-amber-300 transition-all active:bg-amber-500/30 active:scale-[0.98] select-none"
             aria-label="Hold to talk — release to mute microphone"
           >
             🎙️ Hold to Talk
