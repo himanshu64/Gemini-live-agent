@@ -1,141 +1,244 @@
-# What If Your Phone Could See For You? Building SightLine with Gemini Live API
+# I Built a Real-Time AI Vision Assistant for Blind Users Using Gemini Live API — Here's What I Learned
 
-*Building a real-time AI vision assistant for the visually impaired using Google's Gemini Live API, ADK, and Cloud Run*
-
-**#GeminiLiveAgentChallenge**
+*By Himanshu Sharma & Ashish Beck · #GeminiLiveAgentChallenge*
 
 ---
 
-## The Problem Nobody Talks About
+There are 285 million visually impaired people in the world.
 
-What if you couldn't read the label on your medication? What if crossing the street meant trusting that the signal changed? What if every restaurant menu was a mystery?
+The best tools available to them today are either expensive — Aira charges $99/month for a human agent — or turn-based: you snap a photo, wait, get a response. That's not how the world works. Life doesn't pause for a request/response cycle.
 
-For **285 million visually impaired people worldwide**, these aren't hypotheticals — they're daily realities. And the existing solutions? Aira charges $99/month for human agents. Be My Eyes depends on volunteer availability. OrCam requires $4,500 hardware. None of them offer what people actually need: a real-time, always-available, context-aware AI companion that simply tells you what it sees.
+So we built **SightLine**: a real-time, voice-driven AI vision assistant that streams your camera and microphone to Gemini simultaneously, and talks back in natural audio — instantly, interruptibly, continuously.
 
-That's why I built **SightLine** — a voice-driven AI vision assistant that uses your phone's camera and Gemini's Live API to describe the world around you, in real time, through natural conversation.
-
----
-
-## Beyond the Text Box
-
-Most AI apps are glorified text boxes. You type a question, wait for a response, type another question. That paradigm fails completely for someone who can't see the screen.
-
-SightLine has **zero text input**. The entire interface is voice and camera. You speak, it listens. You point your camera, it sees. It responds with natural audio — not robotic TTS, but Gemini's native audio output. And critically, you can **interrupt it at any time**. Say "wait, what's that on the left?" mid-sentence, and it stops and redirects immediately.
-
-This is what Google means by "beyond the text box" — AI that works like a real conversation, not a chat window.
+No text box. No button to press. Just speak, and your phone becomes your eyes.
 
 ---
 
-## The Architecture: ADK + LiveRequestQueue + Vertex AI
+## Watch It in Action
 
-SightLine's architecture centers on Google's **Agent Development Kit (ADK)** and the **Gemini Live API** via Vertex AI. Here's how the pieces fit together:
-
-```
-Phone (Camera + Mic)
-    │
-    ▼ WebSocket (wss://)
-    │
-Cloud Run (FastAPI + ADK)
-    │
-    ├── LiveRequestQueue
-    │   ├── Buffers audio chunks (PCM 16kHz)
-    │   ├── Buffers video frames (JPEG 1fps)
-    │   └── Handles barge-in
-    │
-    ├── SightLine Agent (gemini-2.5-flash-native-audio-preview)
-    │   └── 5 function calling tools
-    │
-    ├── Firestore (sessions, preferences)
-    └── Cloud Storage (captured frames)
-```
-
-The frontend is a **Next.js PWA** that captures camera frames at 1fps and mic audio at 16kHz, sending both over a single WebSocket. The backend runs on **Cloud Run** with a FastAPI server that feeds everything into ADK's `LiveRequestQueue`.
-
-The `LiveRequestQueue` is the unsung hero here. It manages the bidirectional stream to Gemini, buffers incoming media, and handles barge-in natively — when the user starts speaking, it signals Gemini to stop generating and process the new input.
+[INSERT YOUTUBE EMBED HERE — paste your YouTube link and Medium will auto-embed it]
 
 ---
 
-## Building with the Gemini Live API: Challenges and Solutions
+## The Problem No One Has Solved
 
-### Challenge 1: Barge-In Without Echo
+When we looked at the landscape, the pattern was clear.
 
-The biggest technical challenge was echo prevention. When Gemini speaks through the phone speaker and the mic picks it up, you get a feedback loop. The solution: the frontend mutes the microphone during agent speech and unmutes it the moment audio playback ends. Simple, but critical for usability.
+**Be My Eyes** connected blind users with sighted volunteers over video. Then they integrated GPT-4 Vision. But it's still turn-based — you take a photo, ask a question, wait. By the time the answer arrives, you've already walked into the shelf.
 
-### Challenge 2: Frame Quality for Reading
+**Aira** gives you a trained human agent via video call. The experience is genuinely excellent, but at $99/month with limited availability, it's not for everyone.
 
-When a visually impaired user holds a medicine bottle up to their camera, the frame quality matters. Blurry frames produce hallucinated text. SightLine's agent prompt instructs Gemini to ask the user to "hold the camera closer" or "hold steady" when it detects low-confidence text recognition, rather than guessing.
+**Seeing AI** from Microsoft offers a collection of single-purpose tools — read text, describe a scene, identify currency. But it's not a conversation. You can't ask a follow-up. You can't say "wait, what was that sign on the left?"
 
-### Challenge 3: Latency
+**OrCam MyEye** is hardware that clips to your glasses and reads aloud automatically. It costs $4,500. Most people in the world who need it can't access it.
 
-Real-time means real-time. We use `gemini-2.5-flash-native-audio-preview` — Google's speed-optimized Live API model — deployed in the same region as our Cloud Run backend. Audio responses start streaming back within hundreds of milliseconds of the user finishing their question.
+The gap is obvious: **real-time, always-available, conversational vision AI**. Something that sees what you can't, responds the moment you speak, and works on the phone you already own.
 
----
-
-## ADK Function Calling: Making the Agent Smart
-
-SightLine isn't just a camera narrator. It's an agent with **5 function calling tools**:
-
-1. **`switch_mode(mode)`** — Changes behavior between Navigation, Reading, Shopping, and Social modes. Each mode has a specialized system prompt. Say "switch to reading mode" and the agent adapts instantly.
-
-2. **`save_preference(key, value)`** — Stores user preferences in Firestore. "I prefer detailed descriptions" persists across sessions.
-
-3. **`capture_frame()`** — Saves the current camera frame to Cloud Storage. The user can say "save this" to capture a frame for later reference.
-
-4. **`get_session_history()`** — Retrieves conversation history so the agent can reference what it described earlier.
-
-5. **`emergency_alert()`** — Triggered by the SOS button or voice command. Logs an emergency event for future integration with emergency contacts.
-
-The key insight: **mode switching updates the system prompt without tearing down the Live API stream**. The agent seamlessly transitions from "there's a crosswalk ahead, the signal is red" to "this is a bottle of ibuprofen, 200mg, take one tablet every 4 to 6 hours" — just by changing the prompt context.
+That's what we set out to build.
 
 ---
 
-## Accessibility-First Design
+## Why Gemini Live API Is Different
 
-SightLine's UI was designed for people who can barely see the screen — or can't see it at all:
+Most AI vision tools share the same pipeline:
 
-- **Dark theme** with WCAG AAA contrast ratios
-- **64px minimum touch targets** — twice the standard 44px recommendation
-- **No text input fields** anywhere in the app
-- **Full ARIA labels** and screen reader support
-- **Haptic feedback** on the emergency button
-- **PWA installable** — launches like a native app, no App Store needed
+> Speech → Speech-to-Text → Vision Model → Language Model → Text-to-Speech → Audio
 
-The mode selector uses a 2x2 grid with distinct colors and large icons. The status indicator shows connection state through color and animation, not text. Every design decision was made with the question: "Can someone with 10% vision use this?"
+Each handoff adds latency. Each handoff adds a potential failure point. The experience feels robotic because it is — you're talking to four separate systems stitched together.
 
----
+Gemini's Live API (`gemini-2.5-flash-native-audio-preview`) eliminates the pipeline entirely.
 
-## 17 Features That Make SightLine a Complete Platform
+It accepts a **continuous bidirectional stream** of audio and video simultaneously, and responds in **native audio** — sound generated directly by the model, not synthesized from text. The result is a single model that hears you, sees your camera, thinks, and speaks — all at once, with no handoffs.
 
-SightLine isn't a demo — it's a fully-featured accessibility platform with **17 production-ready features** across four categories: **camera controls** (flip, torch, PiP preview, low-power mode), **real-time UX** (audio visualizer, conversation history, 16 quick action chips, toast notifications, swipe gestures, spatial audio cues), **session tools** (bookmark descriptions, export transcript, auto session summary), and **resilience** (auto-reconnect with exponential backoff, offline detection with TTS warning, real-time latency indicator, guided onboarding). Every feature was designed with a single question: "Can someone who can't see the screen use this?" The answer had to be yes — through voice feedback, haptic patterns, and spatial audio — before any feature shipped.
+For a blind user navigating a grocery store, the difference between 200ms and 2 seconds isn't just an inconvenience. It's the difference between useful and useless.
 
----
+Three things make this genuinely new:
 
-## What I Learned
+**Barge-in.** The user can interrupt the agent mid-sentence. Say anything and the agent stops immediately and responds. This is how humans talk to each other. No AI assistant has ever done this well before.
 
-**Gemini's Live API is genuinely different.** Most AI APIs are request-response. The Live API maintains a persistent bidirectional stream where you can push audio and video frames continuously, and the model responds in real-time. It's closer to a phone call than a chatbot.
+**Simultaneous modalities.** The model processes what you're saying and what it's seeing at the same time — not sequentially. It can answer "what does this sign say?" while also noticing the step you're about to walk into.
 
-**ADK simplifies streaming enormously.** Without the `LiveRequestQueue` abstraction, managing the bidirectional stream manually — buffering frames, handling interruptions, coordinating tool calls mid-stream — would have been weeks of work. ADK made it days.
-
-**Accessibility constraints improve design.** When you can't rely on text, visual hierarchy, or complex navigation, you're forced to make the interface radically simple. SightLine's UI is better for *everyone* because it was designed for people who need it most.
+**Persistent context.** The model remembers what it saw three seconds ago, thirty seconds ago. You can ask "what was in that window we passed?" and it knows.
 
 ---
 
-## Try It Yourself
+## How We Built It
 
-SightLine is open source and deploys to Cloud Run with a single command:
+![SightLine Architecture Diagram](./architecture-diagram.svg)
 
-```bash
-git clone https://github.com/himanshu64/Gemini-live-agent.git
-cd Gemini-live-agent
-./deploy.sh YOUR_PROJECT_ID us-central1
+The architecture is three layers.
+
+### The Frontend
+
+A Next.js Progressive Web App. No app store — users open a browser, install it like an app, and it works on any device.
+
+The browser captures the camera using the `getUserMedia` API at approximately one frame per second (more on why we chose 1fps later), compressed as JPEG. It simultaneously captures microphone audio as raw PCM at 16kHz — the format Gemini expects. Both streams travel over a single WebSocket connection to our backend.
+
+When Gemini responds, the audio chunks stream back in real time and play through the Web Audio API with no buffering delay.
+
+The UI has no text input field anywhere. Every interaction is voice and camera.
+
+### The Backend
+
+Python on Cloud Run, built with Google's Agent Development Kit (ADK).
+
+ADK provides a primitive called `LiveRequestQueue` that handles the hardest parts of real-time bidirectional streaming: buffering audio/video frames, managing barge-in interruptions, and feeding everything to the Gemini Live API through Vertex AI.
+
+```python
+from google.adk.agents.live_request_queue import LiveRequestQueue
+
+live_request_queue = LiveRequestQueue()
+
+# Audio arrives from the browser WebSocket
+await live_request_queue.send_realtime(
+    types.Part(inline_data=types.Blob(
+        mime_type="audio/pcm",
+        data=audio_chunk
+    ))
+)
+
+# Video frames arrive at ~1fps
+await live_request_queue.send_realtime(
+    types.Part(inline_data=types.Blob(
+        mime_type="image/jpeg",
+        data=frame_data
+    ))
+)
 ```
 
-Check out the [GitHub repo](https://github.com/himanshu64/Gemini-live-agent) for full setup instructions, architecture details, and the demo video.
+The agent itself is straightforward to define:
 
-285 million people are waiting for AI that works for them. With Gemini's Live API and ADK, we can build it.
+```python
+root_agent = Agent(
+    model="gemini-2.5-flash-native-audio-preview",
+    name="SightLineAgent",
+    instruction="""You are a real-time vision assistant for visually impaired users.
+    Describe what you see clearly and concisely.
+    Prioritize safety hazards above everything else.
+    Never mention that you are an AI unless directly asked.""",
+    tools=[switch_mode, save_preference, capture_frame, emergency_alert],
+    generate_content_config=types.GenerateContentConfig(
+        response_modalities=["AUDIO"],
+        speech_config=types.SpeechConfig(
+            voice_config=types.VoiceConfig(
+                prebuilt_voice_config=types.PrebuiltVoiceConfig(
+                    voice_name="Aoede"
+                )
+            )
+        ),
+    ),
+)
+```
+
+### Four Modes, One Agent
+
+SightLine has four specialized modes:
+
+**Navigation** — scene description, obstacle warnings, reading signs and hazards. The system prompt prioritizes spatial information and safety above everything else.
+
+**Reading** — OCR on documents, medicine labels, menus, price tags. The prompt instructs the model to read text verbatim rather than summarizing.
+
+**Shopping** — product identification, price comparison, nutritional information. The prompt focuses on specific product details.
+
+**Social** — describes people's expressions, body language, and actions. Privacy-conscious by design: the model is explicitly instructed never to identify individuals by name.
+
+We initially considered building four separate agents and routing between them. That was overengineering. One agent with four system prompt variants, switched via a function call, is cleaner and faster. The user says "switch to reading mode" — the agent calls `switch_mode("reading")` and instantly adapts. No stream interruption. No restart.
+
+### Function Calling Tools
+
+The model can invoke four tools during a live session:
+
+- `switch_mode(mode)` — switches the active mode and updates the system prompt
+- `save_preference(key, value)` — persists user preferences to Firestore
+- `capture_frame()` — saves the current camera frame to Cloud Storage
+- `emergency_alert()` — triggers an emergency notification
+
+What's remarkable is that these tool calls happen mid-stream without breaking the audio. The model hears "save this location," calls the tool server-side, and continues the conversation without the user noticing anything happened in the background.
 
 ---
 
-*Built for the Gemini Live Agent Challenge 2026*
+## The Hard Problems
 
-**#GeminiLiveAgentChallenge**
+### Echo and Barge-In
+
+Getting true barge-in right is non-trivial.
+
+The phone speaker plays the agent's audio response. The phone microphone picks it up. The model hears its own voice and gets confused.
+
+The fix is two-part. First, enable echo cancellation in the browser:
+
+```javascript
+const stream = await navigator.mediaDevices.getUserMedia({
+  audio: {
+    echoCancellation: true,
+    noiseSuppression: true,
+    sampleRate: 16000,
+  }
+});
+```
+
+Second, on the backend, suppress the microphone stream while the model is actively generating audio, and resume it the moment the user speaks. This creates clean barge-in: the user says anything, the agent stops mid-sentence, and listens.
+
+### Frame Quality for Text Reading
+
+When users hold their camera up to a medicine bottle or a restaurant menu, blurry frames produce hallucinated OCR — the model confidently reads text that isn't there.
+
+The solution is in the system prompt: *"If the image is unclear or blurry, ask the user to hold the camera closer rather than attempting to read."* Simple, but it transformed the reliability of reading mode.
+
+### Cloud Run Cold Starts
+
+Cloud Run scales to zero when idle. For most web apps this is fine. For a live audio streaming app, a 3-second cold start when a user opens the session is catastrophic — they hear silence and assume it's broken.
+
+Setting `min-instances=1` keeps one container warm at all times. It costs roughly $15/month. For a real-time audio product, it's not optional.
+
+---
+
+## What Surprised Us
+
+**1fps is enough.**
+
+We started with 5 frames per second, thinking we needed high frequency for meaningful scene understanding. We didn't. The model has audio context — it hears what the user is saying, and it's smart enough to understand the scene from one frame per second. Dropping to 1fps cut WebSocket bandwidth by 80% with no noticeable quality loss.
+
+**Native audio sounds different.**
+
+We expected Gemini's audio output to feel like text-to-speech. It doesn't. The prosody, pacing, and emphasis are contextually appropriate in a way that synthesized speech never achieves. When the agent says "careful, there's a step right in front of you" — the urgency is audible. For an accessibility product, this is not a minor detail.
+
+**ADK function calling in streaming mode just works.**
+
+We were prepared to build complex state management to handle tool calls within a live audio session. We didn't need to. ADK handles tool calls transparently within the stream. The model calls a function, the backend executes it, the model continues — all without any visible interruption.
+
+---
+
+## The Stack
+
+- **AI Model:** Gemini 2.5 Flash Native Audio Preview via Vertex AI
+- **Agent Framework:** Google ADK (Python) + LiveRequestQueue
+- **Backend:** Python / FastAPI on Cloud Run
+- **Frontend:** Next.js 15 PWA
+- **Database:** Cloud Firestore (sessions, preferences, conversation history)
+- **Storage:** Cloud Storage (captured frames, 7-day auto-cleanup)
+- **Deployment:** `deploy.sh` — one command handles API enablement, bucket creation, CORS, and Cloud Run deploy
+
+---
+
+## What's Next
+
+The immediate opportunity is smart glasses. The same WebSocket and ADK architecture works identically whether the camera feed comes from a phone browser or a glasses-mounted camera connected via a companion app. The Meta Ray-Ban form factor is the natural hardware target — always-on, hands-free, no screen required.
+
+On the business side, the path is clearer than most AI products. Assistive technology has existing insurance reimbursement codes in the United States. Healthcare and enterprise accessibility are B2B channels that don't depend on consumer marketing. A freemium tier with usage limits handles individual users.
+
+The $4 billion assistive technology market is growing at over 10% annually. The competitive moat is real-time streaming — it's technically difficult and takes time to replicate.
+
+---
+
+## Try It
+
+The full source code is open on GitHub. The backend is one `pip install` and one `gcloud run deploy` away.
+
+**GitHub:** [github.com/himanshu64](https://github.com/himanshu64) · [github.com/ashishbeck96](https://github.com/ashishbeck96)
+
+---
+
+*Built for the Gemini Live Agent Challenge · March 2026*
+
+*Tags: #GeminiLiveAgentChallenge #AI #Accessibility #GoogleCloud #Python #MachineLearning #WebDev*
