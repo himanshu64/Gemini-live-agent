@@ -239,9 +239,9 @@ The $4 billion assistive technology market is growing at over 10% annually. The 
 
 The full source code is open on GitHub. The backend is one `pip install` and one `gcloud run deploy` away.
 
-**Himanshu Sharma** — [GitHub](https://github.com/himanshu64) · [Medium](https://medium.com/@himanshusharma_4140) · [X](https://x.com/himansh68)
+**Himanshu Sharma** — [GitHub](https://github.com/himanshu64) · [Medium](https://medium.com/@himanshusharma_4140) · [X](https://x.com/himansh68) · [LinkedIn](https://www.linkedin.com/in/himanshu-sharma-0666a5129/)
 
-**Ashish Beck** — [GitHub](https://github.com/ashishbeck96) · [Medium](https://medium.com/@ashishbeck96) · [X](https://x.com/ashish_asdf) · [GDG](https://gdg.community.dev/u/m692mf/#/about)
+**Ashish Beck** — [GitHub](https://github.com/ashishbeck96) · [Medium](https://medium.com/@ashishbeck96) · [X](https://x.com/ashish_asdf) · [LinkedIn](https://www.linkedin.com/in/ashish-beck/) · [GDG](https://gdg.community.dev/u/m692mf/#/about)
 
 ---
 
