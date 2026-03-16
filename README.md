@@ -1,5 +1,7 @@
 <p align="center">
-  <img src="./blog-header.svg" alt="SightLine — Real-Time AI Vision Assistant" width="100%" />
+  <img src="./screenshots/blog-header.png" alt="SightLine — Real-Time AI Vision Assistant" width="100%" />
+  <br/>
+  <em>SightLine — Real-Time AI Vision Assistant for the Visually Impaired, built with Gemini Live API and Google ADK on Google Cloud.</em>
 </p>
 
 # SightLine
@@ -83,7 +85,9 @@ Open [http://localhost:3000](http://localhost:3000).
 ## Architecture
 
 <p align="center">
-  <img src="./architecture-diagram.svg" alt="SightLine Architecture Diagram" width="100%" />
+  <img src="./screenshots/architecture-diagram.png" alt="SightLine Architecture Diagram" width="100%" />
+  <br/>
+  <em>End-to-end architecture: browser camera + mic stream over WebSocket → Cloud Run (Google ADK + LiveRequestQueue) → Gemini Live API on Vertex AI, with Firestore, Cloud Storage, and Cloud Logging.</em>
 </p>
 
 ---
@@ -102,8 +106,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 ## Authors
 
-- **Himanshu Sharma** — [github.com/himanshu64](https://github.com/himanshu64)
-- **Ashish Beck** — [github.com/ashishbeck96](https://github.com/ashishbeck96)
+- **Himanshu Sharma** — [GitHub](https://github.com/himanshu64)
+- **Ashish Beck** — [GitHub](https://github.com/ashishbeck96) · [Medium](https://medium.com/@ashishbeck96) · [X](https://x.com/ashish_asdf) · [GDG](https://gdg.community.dev/u/m692mf/#/about)
 
 ---
 

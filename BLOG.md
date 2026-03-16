@@ -1,6 +1,9 @@
 # I Built a Real-Time AI Vision Assistant for Blind Users Using Gemini Live API — Here's What I Learned
 
-*By Himanshu Sharma & Ashish Beck · #GeminiLiveAgentChallenge*
+![SightLine — Your AI eyes, always ready to help](./screenshots/blog-header.png)
+*SightLine — a real-time voice + vision AI assistant for the visually impaired, powered by Gemini Live API and Google ADK.*
+
+*By [Himanshu Sharma](https://github.com/himanshu64) & [Ashish Beck](https://medium.com/@ashishbeck96) · #GeminiLiveAgentChallenge*
 
 ---
 
@@ -64,7 +67,8 @@ Three things make this genuinely new:
 
 ## How We Built It
 
-![SightLine Architecture Diagram](./architecture-diagram.svg)
+![SightLine Architecture Diagram](./screenshots/architecture-diagram.png)
+*End-to-end architecture: the user's browser streams camera frames (JPEG, 1fps) and microphone audio (PCM 16kHz) over a WebSocket to Cloud Run, where Google ADK's LiveRequestQueue feeds everything into the Gemini Live API on Vertex AI — which responds in native audio streamed back in real time. Firestore stores sessions and preferences, Cloud Storage holds captured frames, and Cloud Logging tracks latency and errors.*
 
 The architecture is three layers.
 
@@ -235,7 +239,9 @@ The $4 billion assistive technology market is growing at over 10% annually. The 
 
 The full source code is open on GitHub. The backend is one `pip install` and one `gcloud run deploy` away.
 
-**GitHub:** [github.com/himanshu64](https://github.com/himanshu64) · [github.com/ashishbeck96](https://github.com/ashishbeck96)
+**Himanshu Sharma** — [GitHub](https://github.com/himanshu64)
+
+**Ashish Beck** — [GitHub](https://github.com/ashishbeck96) · [Medium](https://medium.com/@ashishbeck96) · [X](https://x.com/ashish_asdf) · [GDG](https://gdg.community.dev/u/m692mf/#/about)
 
 ---
 
