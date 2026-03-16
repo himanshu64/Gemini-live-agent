@@ -3,7 +3,7 @@
 ![SightLine — Your AI eyes, always ready to help](./screenshots/blog-header.png)
 *SightLine — a real-time voice + vision AI assistant for the visually impaired, powered by Gemini Live API and Google ADK.*
 
-*By [Himanshu Sharma](https://github.com/himanshu64) & [Ashish Beck](https://medium.com/@ashishbeck96) · #GeminiLiveAgentChallenge*
+*By [Himanshu Sharma](https://medium.com/@himanshusharma_4140) & [Ashish Beck](https://medium.com/@ashishbeck96) · #GeminiLiveAgentChallenge*
 
 ---
 
@@ -239,7 +239,7 @@ The $4 billion assistive technology market is growing at over 10% annually. The 
 
 The full source code is open on GitHub. The backend is one `pip install` and one `gcloud run deploy` away.
 
-**Himanshu Sharma** — [GitHub](https://github.com/himanshu64)
+**Himanshu Sharma** — [GitHub](https://github.com/himanshu64) · [Medium](https://medium.com/@himanshusharma_4140) · [X](https://x.com/himansh68)
 
 **Ashish Beck** — [GitHub](https://github.com/ashishbeck96) · [Medium](https://medium.com/@ashishbeck96) · [X](https://x.com/ashish_asdf) · [GDG](https://gdg.community.dev/u/m692mf/#/about)
 

@@ -106,7 +106,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 ## Authors
 
-- **Himanshu Sharma** — [GitHub](https://github.com/himanshu64)
+- **Himanshu Sharma** — [GitHub](https://github.com/himanshu64) · [Medium](https://medium.com/@himanshusharma_4140) · [X](https://x.com/himansh68)
 - **Ashish Beck** — [GitHub](https://github.com/ashishbeck96) · [Medium](https://medium.com/@ashishbeck96) · [X](https://x.com/ashish_asdf) · [GDG](https://gdg.community.dev/u/m692mf/#/about)
 
 ---
