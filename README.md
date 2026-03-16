@@ -18,9 +18,7 @@ Built for the [Gemini Live Agent Challenge](https://devpost.com) · #GeminiLiveA
 
 ## Demo
 
-[![SightLine Demo](https://img.youtube.com/vi/VIDEO_ID/maxresdefault.jpg)](https://youtu.be/VIDEO_ID)
-
-> Replace `VIDEO_ID` with your YouTube video ID.
+[![SightLine Demo](https://img.youtube.com/vi/6TS_-oKR_lk/maxresdefault.jpg)](https://youtu.be/6TS_-oKR_lk)
 
 ---
 
@@ -45,6 +43,12 @@ All modes are voice-driven with bidirectional streaming and barge-in support.
 | Frontend | Next.js PWA |
 | Database | Firestore |
 | Storage | Cloud Storage |
+
+---
+
+## Testing
+
+Full step-by-step reproducible testing instructions for judges and reviewers: **[TESTING.md](./TESTING.md)**
 
 ---
 

@@ -19,7 +19,7 @@ No text box. No button to press. Just speak, and your phone becomes your eyes.
 
 ## Watch It in Action
 
-[INSERT YOUTUBE EMBED HERE — paste your YouTube link and Medium will auto-embed it]
+https://youtu.be/6TS_-oKR_lk
 
 ---
 
