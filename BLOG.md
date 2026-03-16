@@ -248,3 +248,21 @@ The full source code is open on GitHub. The backend is one `pip install` and one
 *Built for the Gemini Live Agent Challenge · March 2026*
 
 *Tags: #GeminiLiveAgentChallenge #AI #Accessibility #GoogleCloud #Python #MachineLearning #WebDev*
+
+---
+
+## If This Was Useful
+
+If you found this article helpful, here's what you can do:
+
+👏 **Clap** — hit the clap button (up to 50 times!) to help others find this article
+
+💬 **Comment** — we'd love to hear your thoughts. Are you building something similar? Have questions about the ADK or Gemini Live API? Drop a comment below.
+
+🔗 **Share** — share this with someone building AI accessibility tools, or anyone curious about what Gemini's Live API can do beyond the chat box.
+
+📬 **Follow** — stay updated on what we build next:
+- [Himanshu Sharma on Medium](https://medium.com/@himanshusharma_4140)
+- [Ashish Beck on Medium](https://medium.com/@ashishbeck96)
+
+⭐ **Star the repo** — [github.com/himanshu64/Gemini-live-agent](https://github.com/himanshu64/Gemini-live-agent)

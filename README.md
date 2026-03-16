@@ -12,6 +12,8 @@ A real-time AI vision assistant for the visually impaired, built with the **Gemi
 
 Built for the [Gemini Live Agent Challenge](https://devpost.com) · #GeminiLiveAgentChallenge
 
+📖 **[Read the full blog post on Medium](https://medium.com/@ashishbeck96)** ← update with published article URL
+
 ---
 
 ## Demo
